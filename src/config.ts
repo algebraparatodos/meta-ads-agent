@@ -69,6 +69,15 @@ export type Thresholds = {
    * that damage cannot be undone by reading the API back.
    */
   asciiOnlyCopy: boolean;
+  /**
+   * Days a hand-uploaded audience may go without being refreshed before
+   * it is worth mentioning, if something is still targeting it.
+   *
+   * A list uploaded from a file never refreshes itself. It is a
+   * photograph of who had signed up the day somebody exported it, and
+   * nothing in Meta says how old the photograph is.
+   */
+  staleAudienceDays: number;
 };
 
 export type Config = {
@@ -125,6 +134,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   maxUnmatchedShare: 0.5,
   resultActions: ["purchase", "lead", "complete_registration"],
   asciiOnlyCopy: false,
+  staleAudienceDays: 180,
 };
 
 function num(value: unknown, fallback: number, min = 0): number {
@@ -160,6 +170,7 @@ function readThresholds(raw: unknown): Thresholds {
       typeof r.asciiOnlyCopy === "boolean"
         ? r.asciiOnlyCopy
         : DEFAULT_THRESHOLDS.asciiOnlyCopy,
+    staleAudienceDays: num(r.staleAudienceDays, DEFAULT_THRESHOLDS.staleAudienceDays, 1),
   };
 }
 

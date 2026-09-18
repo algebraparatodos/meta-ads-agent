@@ -187,6 +187,15 @@ export type CustomAudience = {
   subtype?: string;
   description?: string;
   time_created?: number;
+  /**
+   * When the contents last changed, as a unix timestamp.
+   *
+   * The field that matters most and the one nobody looks at. A list
+   * uploaded from a file never refreshes itself: it is a photograph of
+   * who had signed up on the day somebody exported it, and it keeps
+   * being targeted long after everyone in it moved on.
+   */
+  time_content_updated?: number;
   approximate_count_lower_bound?: number;
   approximate_count_upper_bound?: number;
   /** JSON. Meta returns it as a string on some subtypes and an object on others. */

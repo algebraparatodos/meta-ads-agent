@@ -14,7 +14,7 @@
  * like bad luck.
  */
 
-import { brandOf, type Config } from "../config.ts";
+import { brandOf, thresholdsFor, type Config } from "../config.ts";
 import type { Snapshot } from "../meta/snapshot.ts";
 import type { CustomAudience } from "../meta/types.ts";
 import type { Finding } from "./types.ts";
@@ -166,4 +166,86 @@ export function noExclusions(snapshot: Snapshot, config: Config): Finding[] {
   return findings;
 }
 
-export const audienceChecks = [audienceIncludesCustomerArea, noExclusions];
+/**
+ * A hand-uploaded list that has not been refreshed, and is being used.
+ *
+ * The only kind of audience that does not maintain itself. A website
+ * audience fills from the pixel, an engagement one from Instagram, but a
+ * list uploaded from a file is frozen the moment it is uploaded: it is a
+ * photograph of who had signed up that day, and it keeps being targeted,
+ * and excluded, long after it stopped describing anybody.
+ *
+ * Nothing surfaces this. The audience shows a healthy size, appears in
+ * the targeting picker like any other, and Meta never mentions its age.
+ * The campaign runs and the money goes to people who signed up a year
+ * ago, while the ones who signed up last month are not in it at all.
+ *
+ * Only raised for audiences a live ad set actually uses. There is no
+ * point telling somebody that a list they are not targeting is old.
+ */
+export function staleUploadedAudience(snapshot: Snapshot, config: Config): Finding[] {
+  const used = audiencesInUse(snapshot);
+  const findings: Finding[] = [];
+  const limit = thresholdsFor(config, null).staleAudienceDays;
+  const now = Date.now() / 1000;
+
+  for (const audience of snapshot.audiences) {
+    // Only the uploaded kind. Everything else refreshes on its own and
+    // an old timestamp there means nothing.
+    if (audience.subtype !== "CUSTOM") continue;
+    if (!used.has(audience.id)) continue;
+
+    const updated = audience.time_content_updated;
+    if (!updated) continue;
+
+    const days = Math.floor((now - updated) / 86400);
+    if (days < limit) continue;
+
+    const size = audience.approximate_count_lower_bound ?? 0;
+    const excludedOnly = isOnlyExcluded(snapshot, audience.id);
+
+    findings.push({
+      id: "stale_uploaded_audience",
+      severity: "notice",
+      brandId: null,
+      refType: "site",
+      refId: audience.id,
+      refName: audience.name,
+      title: `"${audience.name}" was last updated ${days} days ago`,
+      groupTitle: "{n} audiences in use have not been refreshed in months",
+      observed:
+        `It is a list uploaded from a file, so it never refreshes itself, and a ` +
+        `live ad set is still ${excludedOnly ? "excluding" : "targeting"} it. It has ` +
+        `about ${size.toLocaleString("en-GB")} people in it, all of whom were in it ` +
+        `${days} days ago. Nobody who arrived since is.`,
+      change: excludedOnly
+        ? "Export the list again and replace it. Until then, everyone who bought or " +
+          "enquired in the meantime is not being excluded, so the campaign is paying " +
+          "to show the ad to people who already did the thing."
+        : "Export the list again and replace it, so the campaign talks to the people " +
+          "who are actually interested now rather than the ones who were then.",
+      reversible: true,
+      costIfWrong: "Nothing. Replacing a list with a newer version of itself.",
+    });
+  }
+
+  return findings;
+}
+
+/** Whether every live use of this audience is as an exclusion. */
+function isOnlyExcluded(snapshot: Snapshot, audienceId: string): boolean {
+  let included = false;
+  for (const adSet of snapshot.adSets) {
+    if (adSet.effective_status !== "ACTIVE") continue;
+    if ((adSet.targeting?.custom_audiences ?? []).some((a) => a.id === audienceId)) {
+      included = true;
+    }
+  }
+  return !included;
+}
+
+export const audienceChecks = [
+  audienceIncludesCustomerArea,
+  noExclusions,
+  staleUploadedAudience,
+];

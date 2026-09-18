@@ -191,7 +191,8 @@ export async function takeSnapshot(
       `${account}/customaudiences`,
       {
         fields:
-          "id,name,subtype,description,time_created,rule,rule_aggregation," +
+          "id,name,subtype,description,time_created,time_content_updated," +
+          "rule,rule_aggregation," +
           "approximate_count_lower_bound,approximate_count_upper_bound",
         limit: 100,
       },
