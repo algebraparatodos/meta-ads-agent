@@ -1,0 +1,130 @@
+{
+  "_comment": [
+    "Everything the agent needs to know about one installation. In",
+    "production this lives in the `settings` and `brands` tables, not in a",
+    "file: the repository is public and none of it belongs in git.",
+    "",
+    "Copy this to local-config.json, fill it in, and point tools/dry-run.ts",
+    "at it to see what the agent would say about your account without",
+    "deploying anything. local-config.json is already in .gitignore."
+  ],
+
+  "account": {
+    "id": "act_000000000000000",
+    "_comment_timeZone": [
+      "Meta cuts its reporting days in this zone. Asking for 'the last",
+      "three days' with a different calendar silently returns a different",
+      "range than the one you are reasoning about."
+    ],
+    "timeZone": "Europe/Madrid",
+    "currency": "EUR"
+  },
+
+  "_comment_brands": [
+    "One entry per business sharing the ad account. Meta has no field for",
+    "this: an account holding two brands tells them apart by a prefix in",
+    "the campaign name, which is a convention and not a guarantee. A",
+    "campaign that matches none of them raises a finding rather than being",
+    "guessed at."
+  ],
+  "brands": [
+    {
+      "id": "brand-a",
+      "displayName": "Brand A",
+      "campaignPrefix": "BRANDA",
+      "pixelId": "000000000000000",
+      "domain": "brand-a.example"
+    },
+    {
+      "id": "brand-b",
+      "displayName": "Brand B",
+      "campaignPrefix": "BRANDB",
+      "pixelId": "111111111111111",
+      "domain": "brand-b.example",
+      "_comment_thresholds": [
+        "Only the numbers that differ from the account's, merged over",
+        "them. Useful when one brand's purchase event cannot be trusted:",
+        "point resultActions further up the funnel for that brand alone",
+        "instead of distorting the whole account."
+      ],
+      "thresholds": {
+        "resultActions": ["initiate_checkout"]
+      }
+    }
+  ],
+
+  "_comment_retiredPixels": [
+    "Pixels this account used to use and must not use again. Worth naming",
+    "rather than ignoring: an ad cloned from an old one inherits the old",
+    "pixel, and its conversions land where no live campaign can bid on",
+    "them. An unknown pixel is somebody else's business and is left alone;",
+    "a retired one is ours and is a fault."
+  ],
+  "retiredPixels": [
+    { "id": "222222222222222", "name": "old pixel, retired 2024" }
+  ],
+
+  "_comment_customerAreas": [
+    "Hosts or paths a customer reaches AFTER buying: a members area, a",
+    "course platform, an account dashboard.",
+    "",
+    "They matter because the pixel cannot tell them from the shop front.",
+    "A retargeting audience built on 'visited the site' quietly collects",
+    "everyone logging in to use what they already paid for, and the",
+    "campaign chasing new customers spends part of its budget on them.",
+    "Nothing in Meta reports this.",
+    "",
+    "Note this is not a reason to remove the pixel from those pages. On",
+    "many platforms the checkout lives on the same domain as the members",
+    "area, so removing it would stop measuring every sale. Naming the",
+    "area here keeps the measurement and fixes the audiences."
+  ],
+  "customerAreas": [
+    "example.mykajabi.com/library",
+    "example.mykajabi.com/products"
+  ],
+
+  "thresholds": {
+    "maxFrequency": 2.5,
+    "frequencyDays": 7,
+    "spendWithoutResults": 15,
+    "spendDays": 3,
+    "ctrDrop": 0.25,
+    "cpmRise": 0.25,
+    "fatigueDays": 3,
+    "minImpressions": 1000,
+    "maxSpendShare": 0.55,
+    "maxUnmatchedShare": 0.5,
+    "resultActions": ["purchase", "lead", "complete_registration"],
+    "_comment_asciiOnlyCopy": [
+      "Off by default: accented copy is correct copy. Worth turning on",
+      "only for an account that has already had text reach Meta as",
+      "replacement characters, because that damage cannot be undone."
+    ],
+    "asciiOnlyCopy": false
+  },
+
+  "notify": {
+    "to": "you@example.com",
+    "from": "Ads agent <ads@ads.example.com>",
+    "replyDomain": "ads.example.com",
+    "_comment_approvers": [
+      "Only these addresses can approve by replying. A reply from anyone",
+      "else is stored and ignored."
+    ],
+    "approvers": ["you@example.com"]
+  },
+
+  "budget": {
+    "_comment": [
+      "Euros. The daily cap is what stops a bug in a loop; the monthly one",
+      "is the number you actually agreed to. When the monthly cap is hit,",
+      "the LLM half stops and the deterministic checks keep running."
+    ],
+    "dailyEur": 0.065,
+    "monthlyEur": 2
+  },
+
+  "maxProposalsPerDay": 3,
+  "proposalTtlDays": 7
+}
