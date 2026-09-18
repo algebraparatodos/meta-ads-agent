@@ -65,7 +65,15 @@ export function compose(
   const brand = config.brands.find((b) => b.id === proposal.brandId);
   const label = brand ? `${brand.displayName} · ` : "";
 
-  const subject = `[${proposal.code}] ${label}${proposal.title}`;
+  // Proposals from the model are marked, because the two kinds deserve
+  // different amounts of trust and the difference is invisible once they
+  // are sitting next to each other in an inbox. One comes from a field
+  // being empty, which is a fact. The other comes from a judgement about
+  // what some numbers mean, which can be wrong in ways that read
+  // perfectly well.
+  const judged = proposal.source === "llm";
+  const mark = judged ? " · judgement" : "";
+  const subject = `[${proposal.code}${mark}] ${label}${proposal.title}`;
 
   // The plain text part is not a fallback nobody sees. It is what a
   // reply quotes, so it has to read correctly underneath the answer.
@@ -92,7 +100,9 @@ export function compose(
   <div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:10px;padding:28px">
     <p style="margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:${
       urgent ? "#B42318" : "#6B6B70"
-    }">${urgent ? "Costing money now" : "Worth a look"} · ${escapeHtml(proposal.code)}</p>
+    }">${urgent ? "Costing money now" : judged ? "A judgement, not a fault" : "Worth a look"} · ${escapeHtml(
+      proposal.code,
+    )}</p>
     <h1 style="margin:0 0 18px;font-size:19px;line-height:1.35;font-weight:600">${escapeHtml(
       proposal.title,
     )}</h1>
@@ -116,6 +126,12 @@ export function compose(
       proposal.reversible
         ? ""
         : `<p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#B42318"><strong>Not reversible.</strong> Worth talking through before deciding.</p>`
+    }
+
+    ${
+      judged
+        ? `<p style="margin:0 0 14px;font-size:13px;line-height:1.6;color:#6B6B70"><strong>This one is a judgement, not a broken field.</strong> It was reasoned from the account's numbers and it can be wrong in ways that read perfectly well. Worth checking the figure it cites before agreeing.</p>`
+        : ""
     }
 
     <div style="margin:22px 0 18px">

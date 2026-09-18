@@ -12,8 +12,17 @@ import { loadConfig } from "./config.ts";
 import { MetaClient } from "./meta/client.ts";
 import { loadSnapshot, saveSnapshot, takeSnapshot } from "./meta/snapshot.ts";
 import { hydratePixelStats } from "./meta/pixel-stats.ts";
-import { runChecks } from "./checks/run.ts";
-import { expireStale, openProposals, saveNew, toProposals, type Stored } from "./queue/proposals.ts";
+import { context, runChecks } from "./checks/run.ts";
+import {
+  expireStale,
+  fromAnalyst,
+  openProposals,
+  saveNew,
+  toProposals,
+  type Stored,
+} from "./queue/proposals.ts";
+import { summarise } from "./analyst/summary.ts";
+import { analyse } from "./analyst/analyst.ts";
 import { compose } from "./mail/compose.ts";
 import { createDecisionLinks, decide, redeem } from "./mail/links.ts";
 import { markEmailed, send, unsent } from "./mail/send.ts";
@@ -36,6 +45,8 @@ export type Env = {
    * default for an installation that does not need it.
    */
   RUN_TOKEN?: string;
+  /** Unset means the model half simply does not run. */
+  ANTHROPIC_API_KEY?: string;
 };
 
 /**
@@ -95,6 +106,40 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   const saved = await saveNew(env.DB, proposals);
   did.push(`${saved.length} new, ${proposals.length - saved.length} already open`);
 
+  // The model half runs last and only on a usable snapshot. Everything
+  // above has already been saved, so a failure here costs the judgement
+  // and nothing else.
+  if (!stored.complete) {
+    did.push("snapshot incomplete: the analyst did not run");
+  } else if (env.ANTHROPIC_API_KEY) {
+    try {
+      const summary = summarise({
+        snapshot: stored.snapshot,
+        config,
+        findings,
+        pendingReview: context(stored.snapshot).pendingReview,
+        history: await recentHistory(env.DB),
+        baseline: null,
+      });
+
+      const result = await analyse(summary, config, day, env.DB, env.ANTHROPIC_API_KEY);
+      if (!result.ran) {
+        did.push(`analyst skipped: ${result.why}`);
+      } else {
+        const fromModel = await fromAnalyst(result.proposals, day);
+        const savedModel = await saveNew(env.DB, fromModel);
+        saved.push(...savedModel);
+        did.push(
+          `analyst: ${result.note}, ${savedModel.length} new, ` +
+            `${result.costEur.toFixed(4)} EUR`,
+        );
+      }
+    } catch (err) {
+      console.error("[analyst] fell over:", err);
+      did.push("analyst fell over, see the log");
+    }
+  }
+
   // What gets emailed is "still waiting and not emailed yet", not "new
   // today". The difference matters: a proposal created on a run whose
   // email failed would otherwise never be sent again, because it is not
@@ -125,6 +170,27 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   did.push(`${sentCount} emailed of ${waiting.length} waiting`);
 
   return { ok: true, did };
+}
+
+/**
+ * What was proposed recently and what came of it.
+ *
+ * Given to the model so it can see its own record: what got rejected,
+ * and what the owner said when rejecting it. Without that it argues the
+ * same point every week, having no idea it already lost that argument.
+ */
+async function recentHistory(
+  db: D1Database,
+): Promise<{ code: string; title: string; state: string; comment: string | null }[]> {
+  const rows = await db
+    .prepare(
+      `select code, title, state, comment from proposals
+        where created_at > datetime('now', '-30 days')
+          and state in ('approved', 'rejected', 'applied', 'measured')
+        order by state_at desc limit 12`,
+    )
+    .all<{ code: string; title: string; state: string; comment: string | null }>();
+  return rows.results ?? [];
 }
 
 /**
