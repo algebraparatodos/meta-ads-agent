@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meta-ads-executor",
+  "main": "src/executor.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // No `fetch` handler in src/executor.ts, and `workers_dev` off. This
+  // Worker holds the only token that can spend money, and it has no
+  // address on the internet to attack. Nothing reaches it except its own
+  // clock and the approvals already written to the shared database.
+  "workers_dev": false,
+  "observability": { "enabled": true },
+
+  "triggers": {
+    // A few minutes past the agent's run, so approvals decided overnight
+    // are applied before the next picture is taken and the change is
+    // measured from a clean starting point.
+    "crons": ["20 * * * *"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "meta-ads-agent",
+      // Left as a placeholder on purpose. A D1 id is not a secret, but
+      // it identifies somebody's account and this repository is public.
+      // Deploys read wrangler.local.jsonc instead, which is gitignored:
+      //   npm run deploy
+      "database_id": "PUT_YOUR_D1_ID_HERE"
+    }
+  ]
+
+  // Secrets:
+  //   META_ADS_TOKEN_WRITE  the one with ads_management
+  //   RESEND_API_KEY        to report back what it applied
+}

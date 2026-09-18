@@ -1,0 +1,35 @@
+{
+  "name": "meta-ads-agent",
+  "version": "0.1.0",
+  "description": "Watches a Meta ad account, finds what is broken, and proposes changes you approve by replying to an email.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy -c wrangler.local.jsonc",
+    "deploy:executor": "wrangler deploy -c wrangler.executor.local.jsonc",
+    "db:local": "wrangler d1 execute meta-ads-agent -c wrangler.local.jsonc --local --file schema.sql",
+    "db:remote": "wrangler d1 execute meta-ads-agent -c wrangler.local.jsonc --remote --file schema.sql"
+  },
+  "keywords": [
+    "meta-ads",
+    "facebook-marketing-api",
+    "cloudflare-workers",
+    "human-in-the-loop",
+    "llm-agent"
+  ],
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260917.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0"
+  }
+}

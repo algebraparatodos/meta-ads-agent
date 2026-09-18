@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "meta-ads-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The panel, the one click approval links and the inbound email
+  // webhook all need an address, so this Worker has a `fetch` handler.
+  // That is exactly why it must never hold a token that can spend: see
+  // wrangler.executor.jsonc for the half that can.
+  "workers_dev": false,
+  "observability": { "enabled": true },
+
+  "triggers": {
+    // Once an hour. The code decides whether it is time, because cron
+    // runs in UTC and countries that change their clocks twice a year
+    // would otherwise drift by an hour for half the year.
+    "crons": ["5 * * * *"]
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "meta-ads-agent",
+      // Left as a placeholder on purpose. A D1 id is not a secret, but
+      // it identifies somebody's account and this repository is public.
+      // Deploys read wrangler.local.jsonc instead, which is gitignored:
+      //   npm run deploy
+      "database_id": "PUT_YOUR_D1_ID_HERE"
+    }
+  ],
+
+  "vars": {
+    // Everything account specific lives in the database, not here. These
+    // two only say how the Worker talks about itself.
+    "PUBLIC_URL": "https://example.com"
+  }
+
+  // Secrets, set with `wrangler secret put`, never in this file:
+  //   META_ADS_TOKEN_READ   a token with ads_read AND NOTHING ELSE.
+  //                         Verify with /debug_token before loading it:
+  //                         a token carrying ads_management can spend, and
+  //                         Meta will not let you remove that permission
+  //                         later. You have to create a separate one.
+  //   ANTHROPIC_API_KEY
+  //   RESEND_API_KEY
+  //   PANEL_PASSWORD
+  //   LINK_SIGNING_KEY      signs the one click approval links
+  //   RESEND_WEBHOOK_SECRET verifies inbound email really came from Resend
+}

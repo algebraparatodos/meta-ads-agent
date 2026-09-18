@@ -1,0 +1,5 @@
+# Line endings are normalised to LF in the repository. Without this, a
+# checkout on Windows and one on Linux produce different bytes for the
+# same file, and every review fills up with whitespace-only diffs that
+# hide the change somebody actually made.
+* text=auto eol=lf

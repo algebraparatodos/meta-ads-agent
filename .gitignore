@@ -1,0 +1,22 @@
+node_modules/
+.wrangler/
+dist/
+*.log
+
+# Nothing account specific ever belongs in this repository. Configuration
+# lives in the database and credentials live in Worker secrets, but a
+# local file is the easiest way to leak one by accident.
+.dev.vars
+.env
+.claves.env
+local-config.json
+wrangler.local.jsonc
+wrangler.executor.local.jsonc
+config.local.sql
+.run-token.local
+tail.local.log
+
+# La bitacora del proyecto. Se queda en el disco y no en el repositorio:
+# lleva las cifras de la cuenta, los nombres de las marcas y el historial
+# de decisiones, que es justo lo que este repositorio no puede contener.
+PENDIENTES.md
