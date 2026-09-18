@@ -192,7 +192,7 @@ export async function takeSnapshot(
       {
         fields:
           "id,name,subtype,description,time_created,time_content_updated," +
-          "rule,rule_aggregation," +
+          "rule,rule_aggregation,delivery_status,operation_status," +
           "approximate_count_lower_bound,approximate_count_upper_bound",
         limit: 100,
       },

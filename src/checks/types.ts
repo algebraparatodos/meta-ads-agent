@@ -63,7 +63,12 @@ export type Action =
   | { type: "set_adset_budget"; adSetId: string; dailyBudgetMinor: number }
   | { type: "set_conversion_domain"; adId: string; domain: string }
   | { type: "set_tracking_pixel"; adId: string; pixelId: string }
-  | { type: "set_adset_end"; adSetId: string; endTime: string };
+  | { type: "set_adset_end"; adSetId: string; endTime: string }
+  // Editing who an ad set talks to is allowed on a published ad set and
+  // does not restart its learning phase, unlike changing what it
+  // optimises for. That is what makes these two safe to apply.
+  | { type: "include_audience"; adSetId: string; audienceId: string; audienceName: string }
+  | { type: "exclude_audience"; adSetId: string; audienceId: string; audienceName: string };
 
 export type Finding = {
   /** Stable across runs. Half of the fingerprint that stops repeats. */

@@ -201,7 +201,48 @@ export type CustomAudience = {
   /** JSON. Meta returns it as a string on some subtypes and an object on others. */
   rule?: unknown;
   rule_aggregation?: string;
+  /**
+   * Meta's own verdict on whether this audience can be served.
+   *
+   * Worth using instead of inventing a size threshold. Meta knows what
+   * its own minimum is, it changes it without telling anybody, and it
+   * accounts for things a headcount does not, like how much of the
+   * audience it can actually reach.
+   */
+  delivery_status?: { code?: number; description?: string };
+  operation_status?: { code?: number; description?: string };
 };
+
+/** Whether Meta says this audience is usable right now. */
+export function isServable(audience: CustomAudience): boolean {
+  const code = audience.delivery_status?.code;
+  if (typeof code === "number") return code === 200;
+  // No verdict means not enough is known to claim it is ready.
+  return false;
+}
+
+/**
+ * What an audience is for, read from its rule rather than its name.
+ *
+ * Names are a convention and conventions drift; the rule is what
+ * actually decides who ends up inside. An audience built from purchases
+ * with nothing excluded is a list of customers, which is something to
+ * subtract from a campaign chasing new ones. One built from views or
+ * checkouts with purchasers excluded is a list of people who looked and
+ * did not buy, which is the thing worth chasing.
+ */
+export function audiencePurpose(
+  audience: CustomAudience,
+): "buyers" | "interested" | "unclear" {
+  const rule = typeof audience.rule === "string" ? audience.rule : JSON.stringify(audience.rule ?? "");
+  const includesPurchase = /"inclusions"[\s\S]*Purchase/.test(rule);
+  const excludesPurchase = /"exclusions"[\s\S]*Purchase/.test(rule);
+  const includesIntent = /"inclusions"[\s\S]*(ViewContent|InitiateCheckout|AddToCart|Lead)/.test(rule);
+
+  if (includesPurchase && !excludesPurchase) return "buyers";
+  if (includesIntent && excludesPurchase) return "interested";
+  return "unclear";
+}
 
 export type AdImage = {
   hash: string;

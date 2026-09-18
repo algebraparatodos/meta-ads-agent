@@ -11,6 +11,7 @@
 import type { Config } from "../config.ts";
 import type { Snapshot } from "../meta/snapshot.ts";
 import { audienceChecks } from "./audiences.ts";
+import { readinessChecks } from "./audiences-ready.ts";
 import { creativeChecks } from "./creative.ts";
 import { deliveryChecks, inReview } from "./delivery.ts";
 import { measurementChecks } from "./measurement.ts";
@@ -30,6 +31,7 @@ export const allChecks: Check[] = [
   ...measurementChecks,
   ...creativeChecks,
   ...audienceChecks,
+  ...readinessChecks,
   ...deliveryChecks,
 ];
 

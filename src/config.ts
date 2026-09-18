@@ -78,6 +78,15 @@ export type Thresholds = {
    * nothing in Meta says how old the photograph is.
    */
   staleAudienceDays: number;
+  /**
+   * Days a website audience may exist and stay empty before it is worth
+   * saying so.
+   *
+   * An audience that has nobody in it weeks after it was created is not
+   * a small audience: it is an event that is not arriving. Nothing in
+   * Meta distinguishes the two.
+   */
+  emptyAudienceDays: number;
 };
 
 export type Config = {
@@ -135,6 +144,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   resultActions: ["purchase", "lead", "complete_registration"],
   asciiOnlyCopy: false,
   staleAudienceDays: 180,
+  emptyAudienceDays: 21,
 };
 
 function num(value: unknown, fallback: number, min = 0): number {
@@ -171,6 +181,7 @@ function readThresholds(raw: unknown): Thresholds {
         ? r.asciiOnlyCopy
         : DEFAULT_THRESHOLDS.asciiOnlyCopy,
     staleAudienceDays: num(r.staleAudienceDays, DEFAULT_THRESHOLDS.staleAudienceDays, 1),
+    emptyAudienceDays: num(r.emptyAudienceDays, DEFAULT_THRESHOLDS.emptyAudienceDays, 1),
   };
 }
 
