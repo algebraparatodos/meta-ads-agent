@@ -54,6 +54,17 @@ export type Thresholds = {
   fatigueDays: number;
   /** Below this, the numbers are coincidence and nothing is compared. */
   minImpressions: number;
+  /**
+   * Events needed before the match rate means anything.
+   *
+   * Much lower than `minImpressions` and deliberately a separate number.
+   * Impressions arrive in tens of thousands; pixel events arrive in
+   * dozens, and the window `/stats` reports on is hours, not days.
+   * Sharing one threshold between them means the match rate check can
+   * never fire on a small advertiser, however bad the matching is,
+   * which is exactly the advertiser it matters most to.
+   */
+  minEventsForMatching: number;
   /** In an ad set, the share one ad may take before it is questioned. */
   maxSpendShare: number;
   /** Share of events Meta could not match to a person before it is flagged. */
@@ -139,6 +150,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   cpmRise: 0.25,
   fatigueDays: 3,
   minImpressions: 1000,
+  minEventsForMatching: 100,
   maxSpendShare: 0.55,
   maxUnmatchedShare: 0.5,
   resultActions: ["purchase", "lead", "complete_registration"],
@@ -173,6 +185,8 @@ function readThresholds(raw: unknown): Thresholds {
     cpmRise: num(r.cpmRise, DEFAULT_THRESHOLDS.cpmRise),
     fatigueDays: num(r.fatigueDays, DEFAULT_THRESHOLDS.fatigueDays, 1),
     minImpressions: num(r.minImpressions, DEFAULT_THRESHOLDS.minImpressions),
+    minEventsForMatching: num(
+      r.minEventsForMatching, DEFAULT_THRESHOLDS.minEventsForMatching, 1),
     maxSpendShare: num(r.maxSpendShare, DEFAULT_THRESHOLDS.maxSpendShare),
     maxUnmatchedShare: num(r.maxUnmatchedShare, DEFAULT_THRESHOLDS.maxUnmatchedShare),
     resultActions: actions.length > 0 ? actions : DEFAULT_THRESHOLDS.resultActions,

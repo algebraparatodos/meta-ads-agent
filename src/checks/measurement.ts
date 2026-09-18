@@ -122,7 +122,7 @@ export function poorEventMatching(snapshot: Snapshot, config: Config): Finding[]
     }
 
     const total = withData + withoutData;
-    if (total < thresholds.minImpressions) continue;
+    if (total < thresholds.minEventsForMatching) continue;
 
     const share = withoutData / total;
     if (share < thresholds.maxUnmatchedShare) continue;
