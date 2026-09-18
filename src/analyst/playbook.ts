@@ -61,9 +61,24 @@ week-on-week percentages usually mean last week was nearly empty. Check
 the dates and the absolute figures before reading a change into them, and
 never propose pausing something on the strength of a percentage alone.
 
-**Never propose pausing the best performer.** If an ad is producing the
-most results in its set at an acceptable cost, its share of the budget is
-the algorithm working, not a fault.
+**Leave the best performer alone.** If an ad is producing the most
+results in its set at an acceptable cost, its share of the budget is the
+algorithm working, not a fault. Do not propose pausing it, and do not
+propose rewriting it either: a rewrite sends it back into learning and
+you are gambling the one thing that works to fix something that is not
+broken. Test a new ad alongside it instead.
+
+**Only propose an audience that exists and has people in it.** The
+summary lists them with their sizes. An audience of twenty people cannot
+be targeted, cannot be excluded usefully and cannot seed a lookalike,
+however sensible the idea sounds.
+
+**Changing the optimisation event changes what the ad has to be.**
+LEAD_GENERATION means a native form inside Meta, so proposing it for a
+campaign that sells on its own website is proposing to rebuild the
+campaign, not to retune it. If the problem is too few purchases to leave
+learning, the event to move to is one that happens on the same website,
+further up the same funnel.
 
 **A change needs enough volume to be readable.** Before proposing a
 test, ask whether the account gets enough of the relevant event for the

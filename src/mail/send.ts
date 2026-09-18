@@ -72,12 +72,19 @@ export async function markEmailed(
     .run();
 }
 
-/** Which proposals have not been emailed yet, most worth sending first. */
+/**
+ * Which proposals have not been emailed yet, most worth sending first.
+ *
+ * `watch` items are excluded and stay in the queue. They ask nothing of
+ * the reader, and an email that asks nothing is what teaches somebody to
+ * stop opening the ones that do.
+ */
 export async function unsent(db: D1Database, limit: number): Promise<number[]> {
   const rows = await db
     .prepare(
       `select id from proposals
         where state = 'proposed' and message_id is null
+          and handling in ('auto', 'work')
         order by json_extract(baseline, '$.weight') desc, created_at asc
         limit ?`,
     )

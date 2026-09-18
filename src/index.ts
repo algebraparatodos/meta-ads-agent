@@ -172,6 +172,15 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   return { ok: true, did };
 }
 
+/** Which of the three kinds a proposal is, for wording the reply. */
+async function handlingOf(db: D1Database, id: number): Promise<string> {
+  const row = await db
+    .prepare("select handling from proposals where id = ?")
+    .bind(id)
+    .first<{ handling: string }>();
+  return row?.handling ?? "work";
+}
+
 /**
  * What was proposed recently and what came of it.
  *
@@ -269,14 +278,22 @@ async function handleDecision(env: Env, token: string): Promise<Response> {
     return page("That link is no longer valid", "It may have been used already or expired.", "warn");
   }
 
+  const handling = await handlingOf(env.DB, claim.proposalId);
   const moved = await decide(env.DB, claim.proposalId, claim.action, "link");
   if (!moved) {
     return page("Already decided", "This one had a decision recorded before you clicked.", "warn");
   }
 
-  return claim.action === "approve"
-    ? page("Approved", "It will be applied on the next run, and you will get an email saying what changed.")
-    : page("Discarded", "Nothing will be done. It will not come back unless the situation changes.");
+  if (claim.action !== "approve") {
+    return page("Discarded", "Nothing will be done. It will not come back unless the situation changes.");
+  }
+
+  // The same three consequences as the button, said again on arrival.
+  // Somebody who clicked from a phone a day later should not have to
+  // remember which kind it was.
+  return handling === "auto"
+    ? page("Approved", "It will be applied within the hour, and you will get an email saying exactly what changed.")
+    : page("On the list", "It needs a person, so it is waiting on the worklist. Nothing is applied on its own.");
 }
 
 export default {

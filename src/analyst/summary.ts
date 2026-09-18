@@ -262,6 +262,40 @@ export function summarise(input: SummaryInput): string {
     out.push("");
   }
 
+  // What audiences actually exist, with their sizes. Without this the
+  // model proposes building an audience that already exists and is
+  // empty, which reads as a sensible idea and cannot be carried out.
+  const usable = snapshot.audiences
+    .filter((a) => (a.approximate_count_lower_bound ?? 0) > 100)
+    .sort((a, b) => (b.approximate_count_lower_bound ?? 0) - (a.approximate_count_lower_bound ?? 0));
+  const empty = snapshot.audiences.length - usable.length;
+
+  if (snapshot.audiences.length > 0) {
+    out.push("## Audiences that exist on this account");
+    if (usable.length === 0) {
+      out.push(
+        `All ${snapshot.audiences.length} of them are effectively empty (under a ` +
+          "hundred people). Do not propose anything that depends on retargeting or " +
+          "on a lookalike built from them: there is nobody in them to target or to " +
+          "model from. Building the audience up is itself the proposal worth making.",
+      );
+    } else {
+      for (const audience of usable.slice(0, 15)) {
+        out.push(
+          `- ${audience.name} (${audience.subtype ?? "?"}): about ` +
+            `${(audience.approximate_count_lower_bound ?? 0).toLocaleString("en-GB")} people`,
+        );
+      }
+      if (empty > 0) {
+        out.push(
+          `And ${empty} more that are effectively empty. Anything not listed here ` +
+            "either does not exist or has nobody in it.",
+        );
+      }
+    }
+    out.push("");
+  }
+
   if (input.pendingReview.length > 0) {
     out.push("## Still in review by Meta");
     out.push(

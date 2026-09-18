@@ -72,6 +72,14 @@ export function compose(
   // what some numbers mean, which can be wrong in ways that read
   // perfectly well.
   const judged = proposal.source === "llm";
+
+  // The button has to say what pressing it does. Three different
+  // consequences behind one word called "Approve" is how somebody ends
+  // up agreeing to a change they thought was an acknowledgement.
+  const yes =
+    proposal.handling === "auto"
+      ? { button: "Approve and apply", after: "It will be applied within the hour, and you will get an email saying exactly what changed." }
+      : { button: "Put it on the list", after: "It needs a person, so it goes on the worklist rather than being applied." };
   const mark = judged ? " · judgement" : "";
   const subject = `[${proposal.code}${mark}] ${label}${proposal.title}`;
 
@@ -86,12 +94,16 @@ export function compose(
       ? "\nThis one is reversible."
       : "\nThis one is NOT reversible, so it is worth a conversation first.",
     "",
+    proposal.handling === "auto"
+      ? "Saying yes applies this automatically, within the hour."
+      : "Saying yes puts this on the worklist. Nothing is applied on its own.",
+    "",
     "Reply to this email with yes or no. Anything else is kept as a",
     "comment and nothing happens until you say which it is.",
     "",
     `To talk it through: open Claude Code and type ${chatCommand} ${proposal.code}`,
     "",
-    `Approve: ${links.approve}`,
+    `${yes.button}: ${links.approve}`,
     `Discard: ${links.reject}`,
   ].join("\n");
 
@@ -135,9 +147,13 @@ export function compose(
     }
 
     <div style="margin:22px 0 18px">
-      <a href="${links.approve}" style="display:inline-block;padding:11px 20px;background:#1F1F1F;color:#FFFFFF;text-decoration:none;border-radius:7px;font-size:14px;font-weight:600">Approve</a>
+      <a href="${links.approve}" style="display:inline-block;padding:11px 20px;background:#1F1F1F;color:#FFFFFF;text-decoration:none;border-radius:7px;font-size:14px;font-weight:600">${yes.button}</a>
       <a href="${links.reject}" style="display:inline-block;padding:11px 20px;margin-left:8px;color:#3A3A3E;text-decoration:none;border-radius:7px;font-size:14px;border:1px solid #D9D9DE">Discard</a>
     </div>
+
+    <p style="margin:0 0 12px;font-size:13px;line-height:1.6;color:#3A3A3E">${escapeHtml(
+      yes.after,
+    )}</p>
 
     <p style="margin:0;font-size:13px;line-height:1.65;color:#6B6B70">
       Or just reply to this email with <strong>yes</strong> or <strong>no</strong>.

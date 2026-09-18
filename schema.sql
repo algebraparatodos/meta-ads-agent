@@ -82,6 +82,11 @@ create table if not exists proposals (
   hypothesis text,
   change     text not null,              -- what to do, concrete
   action     text,                       -- JSON the executor understands
+  -- What saying yes actually does. Three consequences used to hide
+  -- behind one button labelled "Approve": apply it now, put it on a
+  -- list, or simply note it. They are not the same agreement.
+  handling   text not null default 'work'
+    check (handling in ('auto', 'work', 'watch')),
 
   -- What would prove it right. Machine readable on purpose: as free text
   -- nobody can recompute it later and the loop never closes.

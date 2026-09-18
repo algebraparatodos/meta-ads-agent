@@ -70,6 +70,7 @@ export function missingConversionDomain(snapshot: Snapshot, config: Config): Fin
     const empty = current.length === 0;
     findings.push({
       id: empty ? "missing_conversion_domain" : "mismatched_conversion_domain",
+      handling: "auto",
       severity: "urgent",
       brandId: brand?.id ?? null,
       refType: "ad",
@@ -244,6 +245,7 @@ export function fragileConversions(snapshot: Snapshot, config: Config): Finding[
 
     findings.push({
       id: "negative_conversion_rule",
+      handling: "watch",
       severity: "notice",
       brandId: null,
       refType: "pixel",

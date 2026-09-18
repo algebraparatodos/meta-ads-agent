@@ -30,6 +30,26 @@ export type Severity = "urgent" | "notice";
 export type RefType = "campaign" | "adset" | "ad" | "pixel" | "site";
 
 /**
+ * What happens when somebody says yes.
+ *
+ * Present because saying yes used to mean three different things behind
+ * one button. Approving "nine ads lose their headline" meant "let us go
+ * and rebuild those creatives"; approving "this conversion will expire
+ * when you publish another landing page" meant "understood, keep an eye
+ * on it". Same button, same wording, entirely different consequences,
+ * and no way to tell which you had just agreed to.
+ *
+ * - `auto`  the executor knows how to do it and will, within the hour.
+ * - `work`  a person has to do it. Saying yes puts it on a list.
+ * - `watch` nothing to do today. Saying yes means acknowledged.
+ *
+ * `watch` items are never emailed. They wait in the queue. An email that
+ * asks nothing of the reader is what teaches them not to open the next
+ * one that does.
+ */
+export type Handling = "auto" | "work" | "watch";
+
+/**
  * A change the executor knows how to make.
  *
  * Deliberately a closed list of shapes rather than free text. The
@@ -71,6 +91,8 @@ export type Finding = {
   change: string;
   /** Present only when the executor can carry it out unaided. */
   action?: Action;
+  /** What saying yes to this actually does. Defaults to `work`. */
+  handling?: Handling;
   reversible: boolean;
   /** What it costs if acting on this turns out to be wrong. */
   costIfWrong?: string;

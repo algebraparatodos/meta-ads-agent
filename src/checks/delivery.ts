@@ -130,6 +130,7 @@ export function lopsidedSpend(snapshot: Snapshot, config: Config): Finding[] {
 
     findings.push({
       id: "lopsided_spend",
+      handling: "auto",
       severity: "urgent",
       brandId,
       refType: "ad",
@@ -177,6 +178,7 @@ export function highFrequency(snapshot: Snapshot, config: Config): Finding[] {
 
     findings.push({
       id: "high_frequency",
+      handling: "watch",
       severity: "notice",
       brandId,
       refType: "adset",
@@ -426,6 +428,7 @@ export function stoppedByMeta(snapshot: Snapshot, _config: Config): Finding[] {
   if (typeof status === "number" && status !== 1) {
     findings.push({
       id: "account_stopped",
+      handling: "watch",
       severity: "urgent",
       brandId: null,
       refType: "campaign",

@@ -122,6 +122,7 @@ export function unroutedAd(snapshot: Snapshot, config: Config): Finding[] {
 
     findings.push({
       id: "unrouted_ad",
+      handling: "auto",
       severity: "urgent",
       brandId: brand?.id ?? null,
       refType: "ad",
@@ -171,6 +172,7 @@ export function crossedPixel(snapshot: Snapshot, config: Config): Finding[] {
 
     findings.push({
       id: "crossed_pixel",
+      handling: routing.via === "ad_tracking" ? "auto" : "work",
       severity: "urgent",
       brandId: brand.id,
       refType: "ad",
@@ -221,6 +223,7 @@ export function retiredPixelInUse(snapshot: Snapshot, config: Config): Finding[]
 
     findings.push({
       id: "retired_pixel_in_use",
+      handling: routing.via === "ad_tracking" ? "auto" : "work",
       severity: "urgent",
       brandId: brand?.id ?? null,
       refType: "ad",
