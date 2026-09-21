@@ -1,0 +1,26 @@
+# Typecheck and tests on every push.
+#
+# Worth having here rather than only locally because of what the test
+# suite now contains: test/write-boundary.test.ts is the thing that
+# enforces the one security claim this project makes, that the half with
+# an address on the internet cannot write to Meta. A guard that only
+# runs when somebody remembers to run it is not a guard.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test

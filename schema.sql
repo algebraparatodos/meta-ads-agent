@@ -130,14 +130,22 @@ begin
   update proposals set code = 'ADS-' || printf('%04d', new.id) where id = new.id;
 end;
 
--- Measurement date, from the plazo the proposal set for itself. Same
--- reasoning: whoever inserts should not have to remember to compute it.
+-- The date this proposal can be judged on, taken from the window it set
+-- for itself. Same reasoning as the code above: whoever inserts should
+-- not have to remember to compute it.
+--
+-- The key is `days`, which is what the analyst's tool schema in
+-- src/analyst/playbook.ts actually returns. An earlier version of this
+-- trigger read `plazo_dias`, left over from when the project was
+-- written in Spanish, so the condition never matched: measure_on stayed
+-- null on every row ever inserted and nothing was ever measured. It
+-- failed the only way a trigger can, which is silently.
 create trigger if not exists proposals_measure_on
 after insert on proposals
-when new.measure_on is null and json_extract(new.confirms, '$.plazo_dias') is not null
+when new.measure_on is null and json_extract(new.confirms, '$.days') is not null
 begin
   update proposals
-     set measure_on = date(new.day, '+' || json_extract(new.confirms, '$.plazo_dias') || ' days')
+     set measure_on = date(new.day, '+' || json_extract(new.confirms, '$.days') || ' days')
    where id = new.id;
 end;
 

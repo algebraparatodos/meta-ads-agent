@@ -97,7 +97,12 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   // The numbers this Worker is not allowed to fetch, left by the
   // executor. Missing them costs two checks and nothing else.
   const staleStats = await hydratePixelStats(env.DB, stored.snapshot);
-  if (staleStats.length > 0) did.push(`no saved pixel stats for ${staleStats.length} pixel(s)`);
+  if (staleStats.length > 0) {
+    // Either the executor has never run or it has stopped. Both look
+    // the same from here and both mean the same thing: the two match
+    // quality checks have nothing to read today.
+    did.push(`no usable pixel stats for ${staleStats.length} pixel(s), is the executor running?`);
+  }
 
   const findings = runChecks(stored.snapshot, config);
   did.push(`${findings.length} findings`);

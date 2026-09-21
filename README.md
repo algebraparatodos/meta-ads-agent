@@ -65,14 +65,14 @@ POST /{archived_ad}  name=<its own current name>  → 400, rejected
 
 ## What it checks
 
-Twenty rules, none of which need a language model. Every expensive
+Two dozen rules, none of which need a language model. Every expensive
 mistake in this domain is deterministic: a field that is empty, a pixel
 id belonging to the other brand, a string holding a replacement
 character. Sending that to a model would be slower, more expensive and
 less reliable, and it would stop working on the day the budget runs out,
 which is the day you most want it working.
 
-**Measurement** — can these numbers be believed at all
+**Measurement**, can these numbers be believed at all
 - An ad running with no pixel attached to its conversions
 - An ad reporting to a different brand's pixel
 - `conversion_domain` empty, or not matching where the ad actually links
@@ -82,16 +82,20 @@ which is the day you most want it working.
 - Pixel settings quietly costing match rate
 - Custom conversions defined by what they exclude, which expire silently
 
-**Creative** — what the ad actually shows somebody
+**Creative**, what the ad actually shows somebody
 - Text that reached Meta as broken bytes and cannot be recovered
 - Vertical artwork being cropped through its own headline in the feed
 - Copy using characters that break in transit (off by default)
 
-**Audience** — who it is shown to
+**Audience**, who it is shown to
 - A retargeting audience quietly collecting people who already bought
 - A sales or lead ad set that excludes nobody
+- A hand-uploaded list nobody has refreshed, still being targeted
+- An audience Meta says it can serve, that nothing is using
+- A website audience weeks old and still empty, which is an event that
+  never arrives rather than a small audience
 
-**Delivery** — what the account is doing with the money
+**Delivery**, what the account is doing with the money
 - The account stopped by Meta rather than by a person
 - Money going out with no results at all
 - One ad taking the budget and converting nothing while a sibling converts
@@ -124,7 +128,7 @@ reads the saved copy.
 
 **"Complete" means "everything essential arrived", not "nothing
 failed".** If the ads call fails, an ad set looks like it has no ads and
-the obvious suggestion is to turn it on — that is false information and
+the obvious suggestion is to turn it on, which is false information and
 it stops the analysis. If a pixel stats call fails, two checks have
 nothing to say and the rest is still true. Conflating those two once
 skipped a whole run over perfectly good data.
@@ -146,6 +150,22 @@ on the GET, because mail scanners follow links before a person sees them.
 
 **Proposals expire after a week.** Not tidiness: an approval given three
 weeks late applies a diagnosis made against numbers that no longer exist.
+
+**Excluding an audience applies itself, including one does not.** Both
+are allowed on a published ad set without restarting its learning phase,
+so the usual reasoning says both are safe. They are not symmetrical.
+Subtracting a list of buyers narrows an audience a little and cannot
+take a campaign off the air. Adding a list to an ad set that had none
+turns an open audience into a closed one of a few hundred people, which
+can stop delivery outright. Reversible in one click is not the same as
+safe to do while nobody is looking.
+
+**A grouped proposal is fingerprinted by the problem, not by who is in
+it.** Fix two of nine and the remaining seven would otherwise hash
+differently, so a second email arrives the morning after doing the work,
+about the problem already sitting in the queue. The cost of the other
+choice is stated where it is made: while a group is open, a tenth object
+catching the same problem waits for the next round.
 
 ## Setup
 
@@ -199,6 +219,17 @@ npm test          # node --test, no framework
 npm run typecheck
 ```
 
+Both run on every push through `.github/workflows/check.yml`.
+
+The one worth reading is `test/write-boundary.test.ts`, which is what
+makes the claim at the top of this file checkable rather than merely
+stated. It walks `src/`, fails if anything outside the executor's writer
+can POST to the Graph API, follows the imports out of the
+internet-facing Worker to prove none of them reach that writer, and
+fails if the executor ever grows a `fetch` handler. A security boundary
+enforced by a comment is enforced until the first person who has not
+read the comment.
+
 ## Notes on the Graph API
 
 Things that cost an afternoon each.
@@ -208,7 +239,7 @@ Things that cost an afternoon each.
   the account-wide listing does not fail at all: it returns empty on
   every row, so it looks like no conversion has a pixel.
 - `GET /{pixel}/stats` requires `ads_management`. Not a permission on the
-  asset — a system user with `ADVERTISE, UPLOAD, ANALYZE` on the pixel
+  asset. A system user with `ADVERTISE, UPLOAD, ANALYZE` on the pixel
   still gets `(#100) Permission Denied` with an `ads_read` token, and
   there is no other endpoint that returns the same numbers.
 - `/stats` nests one array inside another, one entry per time bucket.

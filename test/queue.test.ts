@@ -133,3 +133,40 @@ test("a window of seven days includes both ends", () => {
   assert.deepEqual(windowOf("2026-09-17", 7), { since: "2026-09-11", until: "2026-09-17" });
   assert.equal(daysBetween("2026-09-11", "2026-09-17"), 6, "six steps, seven days");
 });
+
+/**
+ * Partially fixing a group must not produce a second proposal.
+ *
+ * This is the failure the fingerprint change exists for: nine ads share
+ * one problem, two get fixed, and the remaining seven hash differently
+ * from the nine. The old proposal is still open and a second email
+ * arrives the morning after doing the work, which reads as the agent
+ * not noticing.
+ */
+test("a group keeps its identity when some of it is fixed", async () => {
+  const nine = Array.from({ length: 9 }, (_, i) =>
+    finding({ refId: `ad${i}`, refName: `Ad ${i}` }),
+  );
+  const seven = nine.slice(0, 7);
+
+  const [before] = await toProposals(nine, "2026-01-01");
+  const [after] = await toProposals(seven, "2026-01-02");
+
+  assert.equal(before?.refName, "9 objects");
+  assert.equal(after?.refName, "7 objects");
+  assert.equal(
+    before?.fingerprint,
+    after?.fingerprint,
+    "the same problem on the same brand is one proposal, whoever is in it today",
+  );
+});
+
+test("a group and a single of the same check are not the same proposal", async () => {
+  const [asGroup] = await toProposals(
+    Array.from({ length: 3 }, (_, i) => finding({ refId: `ad${i}` })),
+    "2026-01-01",
+  );
+  const [alone] = await toProposals([finding({ refId: "ad0" })], "2026-01-01");
+
+  assert.notEqual(asGroup?.fingerprint, alone?.fingerprint);
+});

@@ -5,8 +5,10 @@
  * there is no POST anywhere else in this Worker, which is the whole
  * point: the access token Meta hands out for ads management can spend
  * money, and Meta's own console will not let you take that permission
- * away once a token has it. So the boundary is drawn in the code and
- * enforced by a lint rule, not by trusting the token.
+ * away once a token has it. So the boundary is drawn in the code, and
+ * `test/write-boundary.test.ts` fails the build if anything crosses it:
+ * a POST to the Graph API outside the executor's writer, or an import
+ * path from the internet-facing Worker that reaches it.
  *
  * Writing happens in the executor Worker, which has no `fetch` handler
  * and therefore no address on the internet. See the README.

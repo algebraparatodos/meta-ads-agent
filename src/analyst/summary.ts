@@ -153,7 +153,7 @@ function movement(now: Insight | undefined, before: Insight | undefined): string
   const spendBefore = n(before.spend);
   const ramping = spendBefore > 0 && n(now.spend) / spendBefore > 3;
   const caveat = ramping
-    ? " — it barely ran the week before, so these percentages are a ramp-up, not a change in behaviour"
+    ? ", and it barely ran the week before, so these percentages are a ramp-up rather than a change in behaviour"
     : "";
 
   return ` [vs the week before: ${parts.join(", ")}${caveat}]`;
@@ -325,7 +325,7 @@ export function summarise(input: SummaryInput): string {
     for (const item of input.history) {
       out.push(
         `- ${item.code} (${item.state}): ${item.title}` +
-          (item.comment ? ` — they said: "${item.comment}"` : ""),
+          (item.comment ? `. They said: "${item.comment}"` : ""),
       );
     }
     out.push("");

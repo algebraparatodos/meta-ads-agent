@@ -113,10 +113,15 @@ export async function decide(
   by: "email" | "link" | "chat" | "panel",
   comment: string | null = null,
 ): Promise<boolean> {
+  // `coalesce` rather than a plain assignment: a decision made by
+  // clicking carries no comment, and writing null over one that came in
+  // by email earlier would erase what they said while recording that
+  // they agreed.
   const result = await db
     .prepare(
       `update proposals
-          set state = ?, state_at = datetime('now'), decided_by = ?, comment = ?
+          set state = ?, state_at = datetime('now'), decided_by = ?,
+              comment = coalesce(?, comment)
         where id = ? and state = 'proposed'`,
     )
     .bind(action === "approve" ? "approved" : "rejected", by, comment, proposalId)

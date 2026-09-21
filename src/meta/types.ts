@@ -285,16 +285,34 @@ export function n(value: string | number | undefined | null): number {
 /**
  * How many results an insight row holds.
  *
- * Meta reports the same conversion under several names at once:
- * `purchase` and `offsite_conversion.fb_pixel_purchase` are one sale
- * counted twice. So this takes the largest matching count rather than
- * the sum. Summing them invents revenue.
+ * Two things are true at once and the naive version gets one of them
+ * wrong whichever way it is written.
+ *
+ * Meta reports the same conversion under several names: `purchase` and
+ * `offsite_conversion.fb_pixel_purchase` are one sale counted twice, so
+ * summing everything that matches invents revenue. But a brand can
+ * count two genuinely different events, a purchase and a lead, and
+ * taking one maximum across all of them reports the larger and throws
+ * the other away.
+ *
+ * So: the largest count within each wanted event, added up across the
+ * different ones.
  */
 export function countResults(row: Insight, resultActions: string[]): number {
-  let best = 0;
+  const best = new Map<string, number>();
+
   for (const action of row.actions ?? []) {
-    if (!resultActions.some((wanted) => action.action_type.includes(wanted))) continue;
-    best = Math.max(best, n(action.value));
+    for (const wanted of resultActions) {
+      if (!action.action_type.includes(wanted)) continue;
+      best.set(wanted, Math.max(best.get(wanted) ?? 0, n(action.value)));
+      // One action_type belongs to one event. Stopping here keeps a
+      // name that happens to contain two of them from being counted in
+      // both buckets.
+      break;
+    }
   }
-  return best;
+
+  let total = 0;
+  for (const count of best.values()) total += count;
+  return total;
 }

@@ -43,9 +43,17 @@
   //                         a token carrying ads_management can spend, and
   //                         Meta will not let you remove that permission
   //                         later. You have to create a separate one.
-  //   ANTHROPIC_API_KEY
-  //   RESEND_API_KEY
-  //   PANEL_PASSWORD
-  //   LINK_SIGNING_KEY      signs the one click approval links
-  //   RESEND_WEBHOOK_SECRET verifies inbound email really came from Resend
+  //   RESEND_API_KEY        required, this is how a proposal reaches you
+  //   ANTHROPIC_API_KEY     optional. Unset means the model half of the
+  //                         analysis does not run and the twenty-odd
+  //                         deterministic checks carry on as normal.
+  //   RUN_TOKEN             optional. Set it and POST /run triggers the
+  //                         daily pass without waiting for tomorrow
+  //                         morning. Unset and that route does not exist,
+  //                         which is the right default.
+  //
+  // There is deliberately no signing key for the approval links: they
+  // are random tokens stored only as their hash, so a link that leaks
+  // cannot be found by reading the database and whoever reads the
+  // database cannot mint one. See src/mail/links.ts.
 }

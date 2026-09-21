@@ -110,11 +110,31 @@ export async function refreshPixelStats(
 }
 
 /**
+ * How old a saved reading may be before it is treated as absent.
+ *
+ * The executor refreshes these every hour, so anything older than a few
+ * days means it has stopped running: an expired token, a failed deploy,
+ * a permission revoked. Without this the agent would go on reading
+ * months-old figures as if they were this morning's, and the match
+ * quality check would either fire or stay quiet on a number nobody has
+ * refreshed since. Stale data that looks fresh is worse than none,
+ * because none is visible.
+ *
+ * Generous on purpose: match quality moves over weeks, so a reading
+ * from Tuesday is still worth having on Friday.
+ */
+const STATS_GOOD_FOR_DAYS = 4;
+
+/**
  * Fills a snapshot's pixel readings from the saved copy.
  *
- * Anything with no saved row is left empty rather than guessed at, and
- * the checks that read it then have nothing to say. That is the correct
- * behaviour on a fresh install, where the executor has not run yet.
+ * Anything with no saved row, or one too old to trust, is left empty
+ * rather than guessed at, and the checks that read it then have nothing
+ * to say. That is the correct behaviour on a fresh install, where the
+ * executor has not run yet, and the honest one when it has stopped.
+ *
+ * Returns the pixels left without usable numbers, which the daily run
+ * reports. It is the only warning that the executor has gone quiet.
  */
 export async function hydratePixelStats(db: D1Database, snapshot: Snapshot): Promise<string[]> {
   const stale: string[] = [];
@@ -136,6 +156,13 @@ export async function hydratePixelStats(db: D1Database, snapshot: Snapshot): Pro
     const reading = snapshot.pixels[id];
     if (!reading) continue;
     if (!row) {
+      stale.push(id);
+      continue;
+    }
+    // `read_at` is written as SQLite's `datetime('now')`, which is UTC
+    // without a zone marker, so it is read back as UTC explicitly.
+    const readAt = Date.parse(`${row.read_at.replace(" ", "T")}Z`);
+    if (!Number.isFinite(readAt) || Date.now() - readAt > STATS_GOOD_FOR_DAYS * 86_400_000) {
       stale.push(id);
       continue;
     }

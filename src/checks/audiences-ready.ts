@@ -105,16 +105,29 @@ export function audienceReadyAndUnused(snapshot: Snapshot, config: Config): Find
     const target = pickAdSet(snapshot, config, audience, purpose);
     if (!target) continue;
 
+    // Whether the audience's own rule names a pixel this account knows.
+    // When it does not, `pickAdSet` had nothing to match the brand on
+    // and picked the first live ad set that fitted, which is a guess.
+    // A guess is fine in a proposal somebody reads; it is not fine in
+    // one that applies itself.
+    const owner = config.brands.find((b) => b.pixelId === pixelOf(audience));
+
     const size = (audience.approximate_count_lower_bound ?? 0).toLocaleString("en-GB");
     const excluding = purpose === "buyers";
 
     findings.push({
       id: excluding ? "audience_ready_to_exclude" : "audience_ready_to_include",
       severity: "notice",
-      // Audience and exclusions are editable on a published ad set and
-      // do not restart its learning phase, unlike the optimisation
-      // event. That is what makes this safe to apply unattended.
-      handling: "auto",
+      // Excluding applies itself; including does not, and the asymmetry
+      // is not timidity. Both edits are allowed on a published ad set
+      // without restarting its learning phase, but they do opposite
+      // things to delivery. Subtracting a list of buyers narrows an
+      // audience slightly and cannot take a campaign off the air.
+      // Adding a list to an ad set that had none turns an open audience
+      // into a closed one of a few hundred people, which can stop
+      // delivery outright. That is not a change to make while nobody is
+      // looking, however easy it is to undo afterwards.
+      handling: excluding && owner ? "auto" : "work",
       brandId: brandOfAdSet(target, snapshot, config),
       refType: "adset",
       refId: target.id,

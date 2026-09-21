@@ -35,7 +35,18 @@ export function spendingWithoutResults(snapshot: Snapshot, config: Config): Find
   const { currency } = config;
   const findings: Finding[] = [];
 
+  // Insights for a seven day window include everything that spent
+  // inside it, including what has since been paused. Raising an urgent
+  // alert every morning about an ad set somebody already turned off is
+  // correct, useless, and the fastest way to teach them to ignore the
+  // urgent ones that are real.
+  const active = new Set(
+    snapshot.adSets.filter((a) => a.effective_status === "ACTIVE").map((a) => a.id),
+  );
+
   for (const row of snapshot.adSetsRecent) {
+    if (!row.adset_id || !active.has(row.adset_id)) continue;
+
     // Per brand, because what counts as a result is not the same for
     // both. One brand's purchase event may include things nobody paid
     // for, so it is measured further up the funnel instead.
@@ -51,7 +62,7 @@ export function spendingWithoutResults(snapshot: Snapshot, config: Config): Find
       severity: "urgent",
       brandId,
       refType: "adset",
-      refId: row.adset_id ?? "",
+      refId: row.adset_id,
       refName: row.adset_name ?? "",
       title: `${money(spend, currency)} and no results in "${row.adset_name}"`,
       observed:
@@ -322,10 +333,16 @@ export function nonStandardAttribution(snapshot: Snapshot, config: Config): Find
     const click = spec.find((s) => s.event_type === "CLICK_THROUGH");
     if (click?.window_days === 7) continue;
 
+    // The brand prefix is a convention on the CAMPAIGN name, never on
+    // the ad set's. Reading it off the ad set answered null every time,
+    // so these proposals arrived with no brand label and no brand
+    // thresholds.
+    const campaign = snapshot.campaigns.find((c) => c.id === adSet.campaign_id);
+
     findings.push({
       id: "non_standard_attribution",
       severity: "notice",
-      brandId: brandFor(adSet.name, config),
+      brandId: brandFor(campaign?.name, config),
       refType: "adset",
       refId: adSet.id,
       refName: adSet.name,
