@@ -47,6 +47,10 @@
   //   ANTHROPIC_API_KEY     optional. Unset means the model half of the
   //                         analysis does not run and the twenty-odd
   //                         deterministic checks carry on as normal.
+  //   RESEND_WEBHOOK_SECRET required to read replies. Unset and POST
+  //                         /inbound refuses everything, which is the
+  //                         right default for an endpoint that decides
+  //                         what happens to somebody's advertising.
   //   RUN_TOKEN             optional. Set it and POST /run triggers the
   //                         daily pass without waiting for tomorrow
   //                         morning. Unset and that route does not exist,

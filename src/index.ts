@@ -14,6 +14,8 @@ import { loadSnapshot, saveSnapshot, takeSnapshot } from "./meta/snapshot.ts";
 import { hydratePixelStats } from "./meta/pixel-stats.ts";
 import { context, runChecks } from "./checks/run.ts";
 import {
+  addComment,
+  byCode,
   expireStale,
   fromAnalyst,
   onTheList,
@@ -27,6 +29,15 @@ import { summarise } from "./analyst/summary.ts";
 import { analyse } from "./analyst/analyst.ts";
 import { compose } from "./mail/compose.ts";
 import { composeWorklist, type Waiting } from "./mail/worklist.ts";
+import {
+  addressOf,
+  codeFrom,
+  couldNotAct,
+  fetchReceived,
+  readAnswer,
+  signatureIsValid,
+  type ReceivedEvent,
+} from "./mail/inbound.ts";
 import { createDecisionLinks, createDoneLink, decide, markDone, redeem } from "./mail/links.ts";
 import { markEmailed, send, unsent } from "./mail/send.ts";
 import { hourIn, today, weekdayOf } from "./dates.ts";
@@ -50,6 +61,13 @@ export type Env = {
   RUN_TOKEN?: string;
   /** Unset means the model half simply does not run. */
   ANTHROPIC_API_KEY?: string;
+  /**
+   * Signs the inbound email webhook. Unset means replies are not read at
+   * all, which is the right default: an endpoint that decides what
+   * happens to somebody's advertising and cannot tell who is calling it
+   * should not exist.
+   */
+  RESEND_WEBHOOK_SECRET?: string;
 };
 
 /**
@@ -219,6 +237,121 @@ async function worklistEmail(
   return `the list emailed, ${waiting.length} on it`;
 }
 
+/**
+ * A reply to a proposal, turned into a decision.
+ *
+ * Answers 200 to everything it has verified, including the cases where
+ * it decides to do nothing. A non-200 makes Resend retry, and retrying
+ * cannot help a message that was read correctly and meant nothing: it
+ * would just arrive again every few minutes. The one exception is a
+ * signature that does not check out, which is not a message from Resend
+ * at all.
+ */
+async function handleInbound(request: Request, env: Env): Promise<Response> {
+  const raw = await request.text();
+  if (!(await signatureIsValid(env.RESEND_WEBHOOK_SECRET, request.headers, raw))) {
+    // Deliberately says nothing about why. Whoever is knocking does not
+    // need to know whether the secret is unset, the timestamp too old or
+    // the signature wrong.
+    return new Response("no", { status: 401 });
+  }
+
+  let event: ReceivedEvent;
+  try {
+    event = JSON.parse(raw) as ReceivedEvent;
+  } catch {
+    return new Response("ok");
+  }
+  if (event.type !== "email.received" || !event.data?.email_id) return new Response("ok");
+
+  const emailId = event.data.email_id;
+  // Svix retries until it gets a 200, and a retry that arrives after the
+  // first attempt already decided something must not decide it again.
+  if (await noticeSent(env.DB, "inbound", emailId)) return new Response("ok");
+
+  const config = await loadConfig(env.DB);
+  if (!config) return new Response("ok");
+
+  const email = await fetchReceived(emailId, env.RESEND_API_KEY);
+  if (!email) {
+    // The only case worth a retry: the body could not be read, and it
+    // may be there in a minute.
+    return new Response("later", { status: 503 });
+  }
+
+  await recordNotice(env.DB, "inbound", emailId);
+
+  const code = codeFrom([...(email.received_for ?? []), ...(email.to ?? [])]);
+  if (!code) {
+    console.log(`[inbound] ${emailId}: no proposal code in the address`);
+    return new Response("ok");
+  }
+
+  const sender = addressOf(email.from);
+  if (!config.notify.approvers.some((who) => who.toLowerCase() === sender)) {
+    // Not an error and not worth an email back: somebody who is not an
+    // approver writing to this address is exactly what should happen to
+    // nothing.
+    console.log(`[inbound] ${code}: ${sender} is not an approver`);
+    return new Response("ok");
+  }
+
+  const proposal = await byCode(env.DB, code);
+  if (!proposal) {
+    console.log(`[inbound] ${code}: no such proposal`);
+    return new Response("ok");
+  }
+
+  const answer = readAnswer(email.text ?? stripTags(email.html ?? ""));
+
+  if (answer.kind === "unclear") {
+    await addComment(env.DB, proposal.id, answer.said);
+    await send(
+      couldNotAct(
+        sender,
+        code,
+        `I could not read that as a yes or a no, so I kept it on ${code} as a comment and left it waiting.`,
+        config,
+      ),
+      env.RESEND_API_KEY,
+    );
+    return new Response("ok");
+  }
+
+  const moved = await decide(env.DB, proposal.id, answer.kind, "email");
+  if (!moved) {
+    await send(
+      couldNotAct(
+        sender,
+        code,
+        `${code} was already ${proposal.state} before your reply arrived, so nothing changed.`,
+        config,
+      ),
+      env.RESEND_API_KEY,
+    );
+    return new Response("ok");
+  }
+
+  // Said and done. What happens next says so on its own: an automatic
+  // change emails what it did, and one that needs a person turns up on
+  // the weekly list until it is marked done.
+  console.log(`[inbound] ${code}: ${answer.kind} by email`);
+  return new Response("ok");
+}
+
+/** A plain text reading of an HTML only reply, good enough for one word. */
+function stripTags(html: string): string {
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>|<\/(p|div|tr)>/gi, "\n")
+    .replace(/<blockquote[\s\S]*/i, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 /** Which of the three kinds a proposal is, for wording the reply. */
 async function handlingOf(db: D1Database, id: number): Promise<string> {
   const row = await db
@@ -380,6 +513,10 @@ export default {
       }
       const result = await dailyRun(env, true);
       return Response.json(result);
+    }
+
+    if (url.pathname === "/inbound" && request.method === "POST") {
+      return handleInbound(request, env);
     }
 
     const decision = url.pathname.match(/^\/d\/([A-Za-z0-9]+)$/);

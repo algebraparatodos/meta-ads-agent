@@ -151,6 +151,22 @@ on the GET, because mail scanners follow links before a person sees them.
 **Proposals expire after a week.** Not tidiness: an approval given three
 weeks late applies a diagnosis made against numbers that no longer exist.
 
+**A reply is a decision, and the proof of it is a signature.** The
+buttons are not where somebody is when they decide: they are reading the
+message on a phone, and the natural thing to do with an email that asks
+a question is to answer it. So the inbound webhook checks the Svix
+signature over the raw body before anything is parsed, refuses a
+timestamp older than five minutes, and reads the answer only if the
+envelope says an approver wrote it. The proposal is identified by the
+code in the local part of the address, which is the only piece of an
+email that survives being replied to, forwarded and prefixed with `Re:`.
+
+**A yes has to be a yes on its own.** "Yes, but lower the budget first"
+is a conversation, not an approval. Anything that is not a bare yes or
+no is kept as a comment, the proposal goes on waiting, and the sender is
+told so. That reply is also the only message this half ever sends:
+silence means it worked, because what happens next announces itself.
+
 **Agreeing to something must not be quieter than ignoring it.** Most
 proposals need a person: saying yes to one records agreement and changes
 nothing in Meta. Nothing applies those, and while one sits approved the
