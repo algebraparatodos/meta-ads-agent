@@ -31,6 +31,7 @@ const config: Config = {
   budget: { dailyEur: 1, monthlyEur: 10 },
   maxProposalsPerDay: 3,
   proposalTtlDays: 7,
+  worklistWeekday: 1,
 };
 
 const burning: Insight = {

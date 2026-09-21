@@ -139,6 +139,19 @@ export type Config = {
   maxProposalsPerDay: number;
   /** Days a proposal waits for a decision before it is too stale to apply. */
   proposalTtlDays: number;
+  /**
+   * The day of the week the list of outstanding work is emailed, 1 being
+   * Monday and 7 Sunday. Zero turns it off.
+   *
+   * It exists because saying yes to a proposal that needs a person does
+   * not do anything on its own, and without this the agreement was the
+   * last anybody heard of it: nothing applies it, the duplicate guard
+   * stops the same finding being raised again while it sits approved,
+   * and expiry only ever touches proposals nobody answered. Approving
+   * was quieter than ignoring, which is the opposite of what a person
+   * clicking a button expects.
+   */
+  worklistWeekday: number;
 };
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -163,6 +176,20 @@ function num(value: unknown, fallback: number, min = 0): number {
   return typeof value === "number" && Number.isFinite(value) && value >= min
     ? value
     : fallback;
+}
+
+/**
+ * A day of the week, 1 to 7, or 0 for never.
+ *
+ * Anything else falls back to Monday rather than to silence. A typo in
+ * this one field must not be the reason a list of outstanding work
+ * stops arriving, because nothing else would report that it had.
+ */
+function weekday(value: unknown): number {
+  if (value === 0) return 0;
+  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 7
+    ? value
+    : 1;
 }
 
 function str(value: unknown, fallback: string): string {
@@ -294,6 +321,7 @@ export async function loadConfig(db: D1Database): Promise<Config | null> {
     },
     maxProposalsPerDay: num(settings.get("maxProposalsPerDay"), 3, 1),
     proposalTtlDays: num(settings.get("proposalTtlDays"), 7, 1),
+    worklistWeekday: weekday(settings.get("worklistWeekday")),
   };
 }
 

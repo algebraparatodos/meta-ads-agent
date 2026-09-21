@@ -43,6 +43,18 @@ export function addDays(day: string, delta: number): string {
   return base.toISOString().slice(0, 10);
 }
 
+/**
+ * The day of the week a `YYYY-MM-DD` date falls on: 1 Monday to 7 Sunday.
+ *
+ * Derived from the date string rather than from a clock, because the
+ * only caller already knows which day it is in the account's timezone
+ * and asking a second time could answer with a different day.
+ */
+export function weekdayOf(day: string): number {
+  const sunday0 = new Date(`${day}T12:00:00Z`).getUTCDay();
+  return sunday0 === 0 ? 7 : sunday0;
+}
+
 /** A window of `days` ending on `end`, both ends included, as Meta wants it. */
 export function windowOf(end: string, days: number): { since: string; until: string } {
   return { since: addDays(end, -(days - 1)), until: end };

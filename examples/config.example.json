@@ -126,5 +126,11 @@
   },
 
   "maxProposalsPerDay": 3,
-  "proposalTtlDays": 7
+  "proposalTtlDays": 7,
+
+  "_worklistWeekday": [
+    "The day the list of what was agreed to and not done is emailed:",
+    "1 Monday to 7 Sunday, 0 never. Nothing outstanding, nothing sent."
+  ],
+  "worklistWeekday": 1
 }

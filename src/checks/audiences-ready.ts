@@ -132,6 +132,10 @@ export function audienceReadyAndUnused(snapshot: Snapshot, config: Config): Find
       refType: "adset",
       refId: target.id,
       refName: target.name,
+      // The reference is the ad set, because that is the object an
+      // action would be carried out against. The finding is about the
+      // audience, so that is the name that goes in a grouped list.
+      groupName: audience.name,
       title: excluding
         ? `"${target.name}" is still paying to reach people who already bought`
         : `"${audience.name}" is ready to advertise to, and nothing is using it`,

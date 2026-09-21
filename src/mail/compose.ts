@@ -79,7 +79,12 @@ export function compose(
   const yes =
     proposal.handling === "auto"
       ? { button: "Approve and apply", after: "It will be applied within the hour, and you will get an email saying exactly what changed." }
-      : { button: "Put it on the list", after: "It needs a person, so it goes on the worklist rather than being applied." };
+      : {
+          button: "Put it on the list",
+          after:
+            "It needs a person, so nothing is applied on its own. It comes back " +
+            "in the weekly list of outstanding work until it is marked done.",
+        };
   const mark = judged ? " · judgement" : "";
   const subject = `[${proposal.code}${mark}] ${label}${proposal.title}`;
 
@@ -96,7 +101,9 @@ export function compose(
     "",
     proposal.handling === "auto"
       ? "Saying yes applies this automatically, within the hour."
-      : "Saying yes puts this on the worklist. Nothing is applied on its own.",
+      : "Saying yes puts this on the list of work waiting for a person." +
+        "\nNothing is applied on its own, and it stays in the weekly list" +
+        "\nuntil it is marked done.",
     "",
     "Reply to this email with yes or no. Anything else is kept as a",
     "comment and nothing happens until you say which it is.",

@@ -8,7 +8,7 @@
  * handler at all. See the README.
  */
 
-import { loadConfig } from "./config.ts";
+import { loadConfig, type Config } from "./config.ts";
 import { MetaClient } from "./meta/client.ts";
 import { loadSnapshot, saveSnapshot, takeSnapshot } from "./meta/snapshot.ts";
 import { hydratePixelStats } from "./meta/pixel-stats.ts";
@@ -16,17 +16,20 @@ import { context, runChecks } from "./checks/run.ts";
 import {
   expireStale,
   fromAnalyst,
+  onTheList,
   openProposals,
   saveNew,
   toProposals,
   type Stored,
 } from "./queue/proposals.ts";
+import { noticeSent, recordNotice } from "./queue/notices.ts";
 import { summarise } from "./analyst/summary.ts";
 import { analyse } from "./analyst/analyst.ts";
 import { compose } from "./mail/compose.ts";
-import { createDecisionLinks, decide, redeem } from "./mail/links.ts";
+import { composeWorklist, type Waiting } from "./mail/worklist.ts";
+import { createDecisionLinks, createDoneLink, decide, markDone, redeem } from "./mail/links.ts";
 import { markEmailed, send, unsent } from "./mail/send.ts";
-import { hourIn, today } from "./dates.ts";
+import { hourIn, today, weekdayOf } from "./dates.ts";
 
 export type Env = {
   DB: D1Database;
@@ -174,7 +177,46 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   }
   did.push(`${sentCount} emailed of ${waiting.length} waiting`);
 
+  const list = await worklistEmail(env, config, day);
+  if (list) did.push(list);
+
   return { ok: true, did };
+}
+
+/**
+ * The weekly reminder of what was agreed to and not done.
+ *
+ * Deliberately after the proposals and not instead of them: they are
+ * different questions. One asks for a decision, this one reports what
+ * the decisions already made are still waiting on.
+ */
+async function worklistEmail(
+  env: Env,
+  config: Config,
+  day: string,
+): Promise<string | null> {
+  if (config.worklistWeekday === 0) return null;
+  if (weekdayOf(day) !== config.worklistWeekday) return null;
+  if (await noticeSent(env.DB, "worklist", day)) return "the list already went out today";
+
+  const items = await onTheList(env.DB);
+  if (items.length === 0) return "nothing on the list";
+
+  const waiting: Waiting[] = [];
+  for (const item of items) {
+    waiting.push({ item, done: await createDoneLink(env.DB, item.id, env.PUBLIC_URL) });
+  }
+
+  const result = await send(composeWorklist(waiting, config, day), env.RESEND_API_KEY);
+  if (!result.sent) {
+    console.error(`[mail] worklist: ${result.reason}`);
+    return "the list could not be sent, see the log";
+  }
+
+  // Written after the send, not before: a mark written first turns a
+  // failed send into a week of silence about work nobody is doing.
+  await recordNotice(env.DB, "worklist", day);
+  return `the list emailed, ${waiting.length} on it`;
 }
 
 /** Which of the three kinds a proposal is, for wording the reply. */
@@ -283,6 +325,16 @@ async function handleDecision(env: Env, token: string): Promise<Response> {
     return page("That link is no longer valid", "It may have been used already or expired.", "warn");
   }
 
+  // Taking something off the list is not a decision about it: the
+  // decision was made when it was approved, and this says the work has
+  // since been done. So it moves a different state and answers on its
+  // own before `decide` gets a chance to refuse it.
+  if (claim.action === "done") {
+    return (await markDone(env.DB, claim.proposalId))
+      ? page("Off the list", "Nothing was changed in Meta by clicking: this only records that it is done.")
+      : page("Already off the list", "It was marked done before you clicked, or it never reached the list.", "warn");
+  }
+
   const handling = await handlingOf(env.DB, claim.proposalId);
   const moved = await decide(env.DB, claim.proposalId, claim.action, "link");
   if (!moved) {
@@ -298,7 +350,11 @@ async function handleDecision(env: Env, token: string): Promise<Response> {
   // remember which kind it was.
   return handling === "auto"
     ? page("Approved", "It will be applied within the hour, and you will get an email saying exactly what changed.")
-    : page("On the list", "It needs a person, so it is waiting on the worklist. Nothing is applied on its own.");
+    : page(
+        "On the list",
+        "It needs a person, so nothing is applied on its own. It comes back in " +
+          "the weekly list of outstanding work until it is marked done.",
+      );
 }
 
 export default {

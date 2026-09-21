@@ -90,6 +90,19 @@ export type Finding = {
    * right. Optional, and there is a plain fallback without it.
    */
   groupTitle?: string;
+  /**
+   * What to call this one in the list a group prints, when `refName` is
+   * not the thing the finding is about.
+   *
+   * Most rules point at what they are about, so the reference and the
+   * subject are the same object and this is not needed. A rule that
+   * proposes doing something to object A because of object B does not:
+   * its reference has to be A, because that is what an action would be
+   * carried out against, while the reader is being told about B. Group
+   * nine of those and the email lists A nine times, which reads as a
+   * bug and hides the nine things that were actually found.
+   */
+  groupName?: string;
   /** What was seen, with the number that was seen. */
   observed: string;
   /** What to do about it, concretely enough to act on. */

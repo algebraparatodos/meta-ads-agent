@@ -41,7 +41,7 @@ const lines: string[] = [
 // Anything starting with an underscore is a comment in the JSON file,
 // which has no comment syntax of its own. It must not reach the database.
 const keys = ["account", "thresholds", "notify", "budget", "retiredPixels", "customerAreas",
-  "maxProposalsPerDay", "proposalTtlDays", "enabled"];
+  "maxProposalsPerDay", "proposalTtlDays", "worklistWeekday", "enabled"];
 for (const key of keys) {
   if (raw[key] === undefined) continue;
   lines.push(setting(key, raw[key]));

@@ -151,6 +151,16 @@ on the GET, because mail scanners follow links before a person sees them.
 **Proposals expire after a week.** Not tidiness: an approval given three
 weeks late applies a diagnosis made against numbers that no longer exist.
 
+**Agreeing to something must not be quieter than ignoring it.** Most
+proposals need a person: saying yes to one records agreement and changes
+nothing in Meta. Nothing applies those, and while one sits approved the
+duplicate guard stops the rule that found it raising it again, so
+agreement was the last anybody heard of the problem, while a proposal
+nobody answered at least expired and came back with fresh figures. A
+weekly message lists everything agreed to and not done, oldest first with
+the age on every line, and every line carries the link that takes it off
+the list. Nothing outstanding, nothing sent.
+
 **Excluding an audience applies itself, including one does not.** Both
 are allowed on a published ad set without restarting its learning phase,
 so the usual reasoning says both are safe. They are not symmetrical.

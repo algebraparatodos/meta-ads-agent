@@ -56,8 +56,37 @@ export async function createDecisionLinks(
   return links as DecisionLinks;
 }
 
+/**
+ * The link that takes something off the list.
+ *
+ * Longer lived than the other two on purpose. An approve link expires
+ * with the proposal, because agreeing late to a diagnosis made against
+ * old numbers is the thing expiry exists to prevent. This one says
+ * something different: that the work has been done. That does not go
+ * stale, and a link that dies before the job gets done would leave the
+ * item on the list with no way off it.
+ */
+export async function createDoneLink(
+  db: D1Database,
+  proposalId: number,
+  publicUrl: string,
+  ttlDays = 90,
+): Promise<string> {
+  const token = toHex(crypto.getRandomValues(new Uint8Array(TOKEN_BYTES)));
+  await db
+    .prepare(
+      `insert into approvals (token_hash, proposal_id, action, expires_at)
+       values (?, ?, 'done', datetime('now', ?))`,
+    )
+    .bind(await hash(token), proposalId, `+${ttlDays} days`)
+    .run();
+  return `${publicUrl.replace(/\/$/, "")}/d/${token}`;
+}
+
+export type Action = "approve" | "reject" | "done";
+
 export type Redemption =
-  | { ok: true; proposalId: number; action: "approve" | "reject" }
+  | { ok: true; proposalId: number; action: Action }
   | { ok: false; reason: "unknown" | "expired" | "used" | "already_decided" };
 
 /**
@@ -92,11 +121,39 @@ export async function redeem(db: D1Database, token: string): Promise<Redemption>
     return { ok: false, reason: "expired" };
   }
 
-  return {
-    ok: true,
-    proposalId: row.proposal_id,
-    action: row.action === "approve" ? "approve" : "reject",
-  };
+  const action: Action =
+    row.action === "approve" ? "approve" : row.action === "done" ? "done" : "reject";
+
+  return { ok: true, proposalId: row.proposal_id, action };
+}
+
+/**
+ * Takes something off the list, without touching Meta.
+ *
+ * `applied` rather than a state of its own, because that is what has
+ * happened: somebody carried the change out by hand, and from here on
+ * it deserves exactly what an automatic change gets. For a proposal that
+ * came with something to check afterwards, which today means the
+ * analyst's, the trigger has already worked out the date to check it on.
+ * A proposal from a deterministic check promises nothing, so being
+ * applied is simply the end of it.
+ *
+ * Only ever moves something that was agreed to and needs a person. An
+ * automatic one is the executor's to move, and a proposal nobody
+ * answered has not been agreed to at all.
+ */
+export async function markDone(db: D1Database, proposalId: number): Promise<boolean> {
+  const result = await db
+    .prepare(
+      `update proposals
+          set state = 'applied', state_at = datetime('now'),
+              applied_at = datetime('now')
+        where id = ? and state = 'approved' and handling = 'work'`,
+    )
+    .bind(proposalId)
+    .run();
+
+  return (result.meta.changes ?? 0) > 0;
 }
 
 /**

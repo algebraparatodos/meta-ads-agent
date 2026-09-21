@@ -158,10 +158,14 @@ create index if not exists proposals_to_measure on proposals (measure_on) where 
 
 -- One click approval links. Only the hash is stored: a link that leaks
 -- from a mailbox should not be replayable from the database.
+--
+-- `done` is the third kind and it arrives later than the other two. It
+-- belongs to the weekly list of things that were approved and need a
+-- person, and it is the only way one of those ever leaves the list.
 create table if not exists approvals (
   token_hash  text primary key,
   proposal_id integer not null references proposals(id) on delete cascade,
-  action      text not null check (action in ('approve', 'reject')),
+  action      text not null check (action in ('approve', 'reject', 'done')),
   expires_at  text not null,
   used_at     text
 );
