@@ -11,7 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { fingerprint, group, toProposals } from "../src/queue/proposals.ts";
+import { fingerprint, fromAnalyst, group, toProposals } from "../src/queue/proposals.ts";
 import type { Finding } from "../src/checks/types.ts";
 import { addDays, daysBetween, windowOf } from "../src/dates.ts";
 
@@ -169,4 +169,45 @@ test("a group and a single of the same check are not the same proposal", async (
   const [alone] = await toProposals([finding({ refId: "ad0" })], "2026-01-01");
 
   assert.notEqual(asGroup?.fingerprint, alone?.fingerprint);
+});
+
+test("the model's name for a brand is turned back into the brand", async () => {
+  const brands = [
+    { id: "gede", displayName: "Gede Studio", campaignPrefix: "GEDE", pixelId: "1", domain: null },
+    { id: "ccn", displayName: "Ceramica con Nati", campaignPrefix: "CCN", pixelId: "2", domain: null },
+  ];
+  const judgement = {
+    kind: "budget",
+    ref_type: "adset" as const,
+    ref_id: "1",
+    ref_name: "An ad set",
+    title: "t",
+    observed: "o",
+    hypothesis: "h",
+    change: "c",
+    confirms: { metric: "m", on: "adset", on_id: "1", direction: "up", threshold: 1, days: 7 },
+    falsified_by: "f",
+    cost_if_wrong: "c",
+    reversible: true,
+    confidence: "medium",
+  };
+
+  // The summary names brands the way a person does, so the model answers
+  // with a display name one day and a campaign prefix the next.
+  const [byName] = await fromAnalyst([{ ...judgement, brand_id: "Gede Studio" }], "2026-01-01", brands);
+  const [byPrefix] = await fromAnalyst([{ ...judgement, brand_id: "GEDE" }], "2026-01-01", brands);
+  const [byId] = await fromAnalyst([{ ...judgement, brand_id: "gede" }], "2026-01-01", brands);
+
+  assert.equal(byName?.brandId, "gede");
+  assert.equal(byPrefix?.brandId, "gede");
+  assert.equal(byId?.brandId, "gede");
+  assert.equal(
+    byName?.fingerprint,
+    byPrefix?.fingerprint,
+    "otherwise the same judgement arrives again tomorrow under another spelling",
+  );
+  assert.equal(byName?.fingerprint, byId?.fingerprint);
+
+  const [unknown] = await fromAnalyst([{ ...judgement, brand_id: "Some other shop" }], "2026-01-01", brands);
+  assert.equal(unknown?.brandId, null, "a brand nobody configured is not a brand");
 });

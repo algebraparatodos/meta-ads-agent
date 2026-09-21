@@ -134,7 +134,7 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
       if (!result.ran) {
         did.push(`analyst skipped: ${result.why}`);
       } else {
-        const fromModel = await fromAnalyst(result.proposals, day);
+        const fromModel = await fromAnalyst(result.proposals, day, config.brands);
         const savedModel = await saveNew(env.DB, fromModel);
         saved.push(...savedModel);
         did.push(
