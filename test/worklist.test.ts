@@ -11,6 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { age, composeWorklist, type Waiting } from "../src/mail/worklist.ts";
+import { replyAddress } from "../src/mail/compose.ts";
 import { group } from "../src/queue/proposals.ts";
 import { weekdayOf } from "../src/dates.ts";
 import type { Config } from "../src/config.ts";
@@ -26,7 +27,13 @@ const config = {
       domain: null,
     },
   ],
-  notify: { to: "him@example.com", from: "ads@example.com", replyDomain: "example.com", approvers: [] },
+  notify: {
+    to: "him@example.com",
+    from: "ads@example.com",
+    replyMailbox: "ads",
+    replyDomain: "example.com",
+    approvers: [],
+  },
 } as unknown as Config;
 
 const waiting = (over: Partial<Waiting["item"]> = {}): Waiting => ({
@@ -87,6 +94,15 @@ test("a reply to the list is not filed against one proposal", () => {
   const email = composeWorklist([waiting()], config, "2026-09-21");
   assert.equal(email.replyTo, "ads@example.com");
   assert.doesNotMatch(email.replyTo, /ads-0001/i);
+});
+
+test("the reply address is a mailbox somebody chose, with the code in it", () => {
+  // The local part is configurable because it has to be an address that
+  // exists. Pointed at a plain mailbox the plus part is ignored by the
+  // mail server and the reply still arrives; pointed at nothing, every
+  // reply bounces two days later and nobody is told.
+  assert.equal(replyAddress("ADS-0113", "j-dev.es", "juani"), "juani+ads-0113@j-dev.es");
+  assert.equal(replyAddress("ADS-0113", "ads.j-dev.es"), "ads+ads-0113@ads.j-dev.es");
 });
 
 test("a group names what it found, not what it would act on", () => {

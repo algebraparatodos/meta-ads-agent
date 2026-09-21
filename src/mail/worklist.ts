@@ -135,7 +135,7 @@ export function composeWorklist(
     // No proposal code in the address: this message is about several of
     // them, so a reply cannot be attributed to one and must not be
     // silently filed against the first.
-    replyTo: `ads@${config.notify.replyDomain}`,
+    replyTo: `${config.notify.replyMailbox}@${config.notify.replyDomain}`,
     subject,
     text,
     html,

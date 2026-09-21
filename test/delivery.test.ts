@@ -27,7 +27,7 @@ const config: Config = {
   retiredPixels: [],
   customerAreas: [],
   thresholds: DEFAULT_THRESHOLDS,
-  notify: { to: "", from: "", replyDomain: "", approvers: [] },
+  notify: { to: "", from: "", replyMailbox: "ads", replyDomain: "", approvers: [] },
   budget: { dailyEur: 1, monthlyEur: 10 },
   maxProposalsPerDay: 3,
   proposalTtlDays: 7,

@@ -31,11 +31,11 @@ export type Email = {
 };
 
 /** Where a reply to this proposal has to land for it to be understood. */
-export function replyAddress(code: string, domain: string): string {
+export function replyAddress(code: string, domain: string, mailbox = "ads"): string {
   // The code travels in the address rather than the subject because
   // subjects get edited, translated and prefixed with Re: and Fwd:,
   // while the envelope recipient survives all of it.
-  return `ads+${code.toLowerCase()}@${domain}`;
+  return `${mailbox}+${code.toLowerCase()}@${domain}`;
 }
 
 function escapeHtml(text: string): string {
@@ -175,7 +175,11 @@ export function compose(
   return {
     to: config.notify.to,
     from: config.notify.from,
-    replyTo: replyAddress(proposal.code, config.notify.replyDomain),
+    replyTo: replyAddress(
+      proposal.code,
+      config.notify.replyDomain,
+      config.notify.replyMailbox,
+    ),
     subject,
     text,
     html,

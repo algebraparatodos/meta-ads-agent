@@ -132,7 +132,26 @@ export type Config = {
   customerAreas: string[];
   thresholds: Thresholds;
   /** Where proposals are emailed, and who may approve them by replying. */
-  notify: { to: string; from: string; replyDomain: string; approvers: string[] };
+  notify: {
+    to: string;
+    from: string;
+    /**
+     * Where a reply lands, as a mailbox and a domain that between them
+     * have to be an address somebody or something actually receives.
+     *
+     * Split in two because the code travels in the local part: replies
+     * go to `<mailbox>+ADS-0001@<domain>`. Pointed at a domain with an
+     * inbound webhook, that is how an answer gets understood. Pointed at
+     * an ordinary mailbox, the plus part is ignored by the mail server
+     * and the reply simply arrives, which is the honest fallback until
+     * the webhook exists. Pointed at a mailbox that does not exist, and
+     * this was the state on 21/09/2026, every reply bounces a day or two
+     * later and the person is told nothing.
+     */
+    replyMailbox: string;
+    replyDomain: string;
+    approvers: string[];
+  };
   /** Hard ceilings for the LLM half, in euros. */
   budget: { dailyEur: number; monthlyEur: number };
   /** Most proposals to email in one day. */
@@ -312,6 +331,7 @@ export async function loadConfig(db: D1Database): Promise<Config | null> {
     notify: {
       to: str(notifyRaw.to, ""),
       from: str(notifyRaw.from, ""),
+      replyMailbox: str(notifyRaw.replyMailbox, "ads"),
       replyDomain: str(notifyRaw.replyDomain, ""),
       approvers: approvers.length > 0 ? approvers : [str(notifyRaw.to, "")].filter(Boolean),
     },
