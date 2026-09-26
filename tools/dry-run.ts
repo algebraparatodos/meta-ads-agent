@@ -27,7 +27,7 @@ import { toProposals } from "../src/queue/proposals.ts";
 import { compose, replyAddress } from "../src/mail/compose.ts";
 import { summarise } from "../src/analyst/summary.ts";
 import { askModel, isUsable, MODEL } from "../src/analyst/analyst.ts";
-import { estimateTokens, priceOf } from "../src/analyst/budget.ts";
+import { HAIKU, LUNA, estimateTokens, priceOf } from "../src/analyst/budget.ts";
 import { context } from "../src/checks/run.ts";
 import { DEFAULT_THRESHOLDS, type Config } from "../src/config.ts";
 import { today } from "../src/dates.ts";
@@ -147,18 +147,19 @@ if (process.argv.includes("--analyst")) {
   console.log("=".repeat(70));
   console.log(summary);
 
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
-    console.log("(set ANTHROPIC_API_KEY to actually ask it)");
+  const keys = { openai: process.env.OPENAI_API_KEY, anthropic: process.env.ANTHROPIC_API_KEY };
+  if (!keys.openai && !keys.anthropic) {
+    console.log("(set OPENAI_API_KEY or ANTHROPIC_API_KEY to actually ask it)");
   } else {
-    const asked = await askModel(summary, key);
+    const asked = await askModel(summary, keys);
     console.log("=".repeat(70));
     if (!asked.ok) {
       console.log("the call failed:", asked.why);
     } else {
-      const cost = priceOf(asked.usage.input_tokens ?? 0, asked.usage.output_tokens ?? 0);
+      const model = keys.openai ? MODEL : "claude-haiku-4-5";
+      const cost = priceOf(asked.usage.input_tokens ?? 0, asked.usage.output_tokens ?? 0, keys.openai ? LUNA : HAIKU);
       console.log(
-        `${MODEL}: ${asked.usage.input_tokens} in, ${asked.usage.output_tokens} out, ` +
+        `${model}: ${asked.usage.input_tokens} in, ${asked.usage.output_tokens} out, ` +
           `${cost.eur.toFixed(4)} EUR (about ${(cost.eur * 30).toFixed(2)} EUR a month)`,
       );
       console.log(`estimated beforehand: ${estimateTokens(summary)} tokens of summary`);

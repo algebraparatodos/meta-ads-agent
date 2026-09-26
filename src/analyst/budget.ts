@@ -29,6 +29,14 @@ export type Pricing = { input: number; output: number };
  */
 export const HAIKU: Pricing = { input: 1, output: 5 };
 
+/**
+ * OpenAI's gpt-6-luna, what the analyst uses since 25/09/2026: a tenth of
+ * Haiku on both sides. Cached input is cheaper still, but it is charged
+ * here at the full rate on purpose: runs are a day apart, so the cache
+ * almost never hits, and a budget should round up, not down.
+ */
+export const LUNA: Pricing = { input: 0.1, output: 0.5 };
+
 const USD_TO_EUR = 0.92;
 
 export function priceOf(

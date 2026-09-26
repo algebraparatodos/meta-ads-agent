@@ -59,7 +59,9 @@ export type Env = {
    * default for an installation that does not need it.
    */
   RUN_TOKEN?: string;
-  /** Unset means the model half simply does not run. */
+  /** The analyst's model. Preferred over Anthropic when both are set. */
+  OPENAI_API_KEY?: string;
+  /** Fallback. With neither key, the model half simply does not run. */
   ANTHROPIC_API_KEY?: string;
   /**
    * Signs the inbound email webhook. Unset means replies are not read at
@@ -137,7 +139,7 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
   // and nothing else.
   if (!stored.complete) {
     did.push("snapshot incomplete: the analyst did not run");
-  } else if (env.ANTHROPIC_API_KEY) {
+  } else if (env.OPENAI_API_KEY || env.ANTHROPIC_API_KEY) {
     try {
       const summary = summarise({
         snapshot: stored.snapshot,
@@ -148,7 +150,10 @@ async function dailyRun(env: Env, force: boolean): Promise<{ ok: boolean; did: s
         baseline: null,
       });
 
-      const result = await analyse(summary, config, day, env.DB, env.ANTHROPIC_API_KEY);
+      const result = await analyse(summary, config, day, env.DB, {
+        openai: env.OPENAI_API_KEY,
+        anthropic: env.ANTHROPIC_API_KEY,
+      });
       if (!result.ran) {
         did.push(`analyst skipped: ${result.why}`);
       } else {
