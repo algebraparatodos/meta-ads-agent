@@ -133,6 +133,30 @@ export type Creative = {
     images?: { hash?: string; adlabels?: { name?: string }[] }[];
     asset_customization_rules?: unknown[];
   };
+  /** Which of Meta's automatic creative enhancements this creative
+   *  allows. Every one of them is its own key, there are more than
+   *  eighty, and Meta adds new ones without asking. */
+  degrees_of_freedom_spec?: {
+    creative_features_spec?: Record<string, { enroll_status?: string }>;
+  };
+};
+
+/**
+ * One line of the account's activity log: who changed what, and when.
+ *
+ * `object_type` uses Meta's old names, which are not the ones in the
+ * panel: CAMPAIGN_GROUP is a campaign, CAMPAIGN is an ad set and ADGROUP
+ * is an ad.
+ */
+export type Activity = {
+  event_time: string;
+  event_type: string;
+  translated_event_type?: string;
+  actor_id?: string;
+  actor_name?: string;
+  object_id?: string;
+  object_name?: string;
+  object_type?: string;
 };
 
 export type Ad = {

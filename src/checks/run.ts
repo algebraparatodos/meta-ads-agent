@@ -11,6 +11,7 @@
 import type { Config } from "../config.ts";
 import type { Snapshot } from "../meta/snapshot.ts";
 import { audienceChecks } from "./audiences.ts";
+import { automationChecks } from "./automation.ts";
 import { readinessChecks } from "./audiences-ready.ts";
 import { creativeChecks } from "./creative.ts";
 import { deliveryChecks, inReview } from "./delivery.ts";
@@ -21,12 +22,14 @@ import type { Check, Finding } from "./types.ts";
 /**
  * In reading order.
  *
- * Routing first because it answers "can these numbers be trusted at
- * all", then the rest of measurement, then what the ad shows a person,
- * then who it is shown to, then what the account is doing with the
- * money.
+ * Changes nobody here made come first, because every other finding
+ * assumes the account is configured the way somebody decided. Then
+ * routing, because it answers "can these numbers be trusted at all",
+ * then the rest of measurement, then what the ad shows a person, then
+ * who it is shown to, then what the account is doing with the money.
  */
 export const allChecks: Check[] = [
+  ...automationChecks,
   ...routingChecks,
   ...measurementChecks,
   ...creativeChecks,

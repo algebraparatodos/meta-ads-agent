@@ -18,7 +18,7 @@ import type { MetaClient, Result } from "./client.ts";
 import type { Config } from "../config.ts";
 import { addDays, windowOf } from "../dates.ts";
 import type {
-  AccountStatus, Ad, AdImage, AdSet, Campaign, CustomAudience, CustomConversion,
+  AccountStatus, Activity, Ad, AdImage, AdSet, Campaign, CustomAudience, CustomConversion,
   Insight, Pixel, PixelStat,
 } from "./types.ts";
 
@@ -47,7 +47,11 @@ const AD_FIELDS =
   "id,name,adset_id,campaign_id,effective_status,status,updated_time," +
   "conversion_domain,tracking_specs," +
   "creative{id,name,title,body,object_type,image_hash,object_story_spec," +
-  "asset_feed_spec,url_tags}";
+  "asset_feed_spec,url_tags,degrees_of_freedom_spec}";
+
+const ACTIVITY_FIELDS =
+  "event_time,event_type,translated_event_type,actor_id,actor_name," +
+  "object_id,object_name,object_type";
 
 export type PixelReading = {
   node: Pixel | null;
@@ -77,6 +81,9 @@ export type Snapshot = {
   conversions: CustomConversion[];
   /** Saved audiences, needed to say anything about who an ad set targets. */
   audiences: CustomAudience[];
+  /** Who changed what in the account over the last two days. Optional
+   *  because snapshots stored before it existed do not have it. */
+  activities?: Activity[];
   pixels: Record<string, PixelReading>;
 };
 
@@ -160,7 +167,7 @@ export async function takeSnapshot(
     insights("adset", recent),
   ]);
 
-  const [campaigns, adSets, ads, conversions, audiences] = await Promise.all([
+  const [campaigns, adSets, ads, conversions, audiences, activities] = await Promise.all([
     client.list<Campaign>(
       `${account}/campaigns`,
       {
@@ -198,6 +205,13 @@ export async function takeSnapshot(
       },
       2,
     ),
+    // Two days rather than one, so that a morning the cron missed does
+    // not also lose the night before it.
+    client.list<Activity>(
+      `${account}/activities`,
+      { fields: ACTIVITY_FIELDS, since: addDays(day, -2), limit: 100 },
+      3,
+    ),
   ]);
 
   const snapshot: Snapshot = {
@@ -215,6 +229,7 @@ export async function takeSnapshot(
     images: {},
     conversions: collect(conversions, "customconversions", missing, []),
     audiences: collect(audiences, "customaudiences", missing, []),
+    activities: collect(activities, "activities", missing, []),
     pixels: {},
   };
 
