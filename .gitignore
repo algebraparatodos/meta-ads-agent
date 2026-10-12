@@ -21,3 +21,6 @@ tail.local.log
 # de decisiones, que es justo lo que este repositorio no puede contener.
 PENDIENTES.md
 dev.local.log
+
+# La memoria de Claude sobre este proyecto: nunca al repo.
+memoria/
